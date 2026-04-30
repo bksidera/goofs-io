@@ -76,7 +76,7 @@ function Centered({ children }) {
         position: 'relative',
         borderRadius: 4,
         overflow: 'hidden',
-        boxShadow: '0 0 30px #FF2D9520, 0 0 60px #00F0FF10',
+        boxShadow: '0 0 30px #00FF4130, 0 0 60px #FF2D9510',
       }}>
         {children}
       </div>

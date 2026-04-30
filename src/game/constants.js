@@ -4,23 +4,31 @@ export const LANE_COUNT = 3;
 export const LANE_WIDTH = 90;
 export const LANE_OFFSET = (GAME_WIDTH - LANE_COUNT * LANE_WIDTH) / 2;
 export const PLAYER_Y = 540;
-export const GATE_HEIGHT = 44;
+export const OBJECT_SIZE = 56;          // hit-volume + render footprint for in-lane objects
+export const GATE_HEIGHT = OBJECT_SIZE; // legacy alias — collision math still uses it
 export const PX = 3;
 export const FONT = "'Courier New', monospace";
 
 export const laneX = (lane) => LANE_OFFSET + lane * LANE_WIDTH + LANE_WIDTH / 2;
 
+// ── Palette ───────────────────────────────────────────────────────────────────
+// Matrix-era hackerman: green is the main voice; gold is reward; red is danger;
+// magenta is reserved for "the popups infected your reality" moments.
 export const COLORS = {
-  PINK:     '#FF2D95',
-  CYAN:     '#00F0FF',
-  GREEN:    '#39FF14',
-  GOLD:     '#FFD700',
-  RED:      '#FF0040',
-  PURPLE:   '#CC44FF',
-  DARK_RED: '#AA0020',
-  BG_TOP:   '#080816',
-  BG_MID:   '#0F0F23',
-  BG_BOT:   '#161630',
+  GREEN:      '#00FF41',  // primary Matrix green
+  GREEN_DIM:  '#00AA22',
+  GREEN_DEEP: '#003311',
+  GOLD:       '#FFD700',
+  GOLD_DEEP:  '#AA7700',
+  RED:        '#FF0040',
+  RED_DEEP:   '#88001A',
+  PINK:       '#FF2D95',  // hackerman shades + popup vibes
+  CYAN:       '#00F0FF',  // accents only
+  PURPLE:     '#CC44FF',  // mystery
+  WHITE:      '#FFFFFF',
+  BG_TOP:     '#000000',
+  BG_MID:     '#020A04',
+  BG_BOT:     '#04140A',
 };
 
 // Wave progression — index 0 = wave 1, index 11 = wave 12+
@@ -42,7 +50,7 @@ export const WAVE_TABLE = [
 export const getWaveConfig = (wave) =>
   WAVE_TABLE[Math.min(wave - 1, WAVE_TABLE.length - 1)];
 
-// Returns a gate type string based on wave-scaled probabilities
+// Returns an object type string based on wave-scaled probabilities
 export const rollGateType = (wave) => {
   const trap     = wave >= 5 ? Math.min(0.08 + (wave - 5) * 0.015, 0.18) : 0;
   const mystery  = wave >= 6 ? Math.min(0.05 + (wave - 6) * 0.012, 0.10) : 0;

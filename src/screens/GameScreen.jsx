@@ -7,12 +7,11 @@ import { spawnPopup, closePopup, decoyButtonPressed } from '../game/popups.js';
 
 import { drawBackground }  from '../rendering/background.js';
 import { drawPlayer }      from '../rendering/player.js';
-import { drawEnemy }       from '../rendering/enemies.js';
 import { drawGate }        from '../rendering/gates.js';
 import {
   drawTrail, drawParticles, drawFloats, drawFlash,
   drawInfectionClearFlash, drawScanlines, drawGlitch,
-  drawInfectionOverlay, drawMuzzleFlash,
+  drawInfectionOverlay,
 } from '../rendering/effects.js';
 import { drawHUD } from '../rendering/hud.js';
 
@@ -36,14 +35,14 @@ function PauseOverlay({ wave, power, onResume, onQuit, muted, onToggleMute }) {
   return (
     <div style={{
       position: 'absolute', inset: 0, zIndex: 300,
-      background: '#080816ee',
+      background: '#000000ee',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       gap: 16,
     }}>
-      <div style={{ fontSize: 11, color: '#00F0FF', fontFamily: FONT, letterSpacing: 4, opacity: 0.5 }}>SYSTEM HALTED</div>
-      <div style={{ fontSize: 36, fontWeight: 900, color: '#fff', fontFamily: FONT, textShadow: '0 0 20px #FF2D95' }}>PAUSED</div>
+      <div style={{ fontSize: 11, color: '#00FF41', fontFamily: FONT, letterSpacing: 4, opacity: 0.7 }}>SYSTEM HALTED</div>
+      <div style={{ fontSize: 36, fontWeight: 900, color: '#fff', fontFamily: FONT, textShadow: '0 0 20px #00FF41' }}>PAUSED</div>
       <div style={{ display: 'flex', gap: 22, fontSize: 11, fontFamily: FONT, marginBottom: 8 }}>
-        {[['WAVE', wave, '#00F0FF'], ['POWER', Math.floor(power), '#FF2D95']].map(([l, v, c]) => (
+        {[['WAVE', wave, '#00FF41'], ['POWER', Math.floor(power), '#FFD700']].map(([l, v, c]) => (
           <div key={l} style={{ textAlign: 'center' }}>
             <div style={{ color: '#555', fontSize: 9 }}>{l}</div>
             <div style={{ color: c, fontSize: 22, fontWeight: 900 }}>{typeof v === 'number' ? v.toLocaleString() : v}</div>
@@ -152,16 +151,12 @@ export default function GameScreen({ onDeath }) {
       const scramble = st._scrambleActive || false;
       for (const g of st.gates) {
         if (!g.alive) continue;
-        drawGate(ctx, laneX(g.lane), g.y, g.display, g.type, g.revealed, st.frame, st.infected, scramble);
-        if (g.type === 'enemy' || g.type === 'pctEnemy') {
-          drawEnemy(ctx, laneX(g.lane), g.y + 44 + 16, g.variant, st.frame);
-        }
+        drawGate(ctx, laneX(g.lane), g.y, g.display, g.type, g.revealed, st.frame, st.infected, scramble, g.variant);
       }
 
       if (st.infected) drawInfectionOverlay(ctx, st.frame);
       drawTrail(ctx, st.trail);
       drawPlayer(ctx, laneX(st.player.lane), 540, st.frame);
-      drawMuzzleFlash(ctx, laneX(st.player.lane), st.frame);
       drawParticles(ctx, st.particles);
       drawFloats(ctx, st.floats);
       drawFlash(ctx, st.flashAlpha, st.flashColor);
@@ -271,7 +266,7 @@ export default function GameScreen({ onDeath }) {
           width: GAME_WIDTH, height: GAME_HEIGHT,
           transform: `scale(${scale})`,
           transformOrigin: 'center center',
-          boxShadow: '0 0 30px #FF2D9520, 0 0 60px #00F0FF10, inset 0 0 40px #00000088',
+          boxShadow: '0 0 30px #00FF4130, 0 0 60px #FF2D9510, inset 0 0 50px #000000aa',
           borderRadius: 4,
           overflow: 'hidden',
           cursor: 'pointer',
@@ -324,8 +319,10 @@ export default function GameScreen({ onDeath }) {
 const S = {
   pauseBtn: {
     padding: '12px 36px', fontSize: 15, fontWeight: 900,
-    fontFamily: FONT, background: 'transparent', color: '#FF2D95',
-    border: '2px solid #FF2D95', cursor: 'pointer', letterSpacing: 3,
+    fontFamily: FONT, background: 'transparent', color: '#00FF41',
+    border: '2px solid #00FF41', cursor: 'pointer', letterSpacing: 3,
     textTransform: 'uppercase',
+    boxShadow: '0 0 8px #00FF4133',
+    textShadow: '0 0 6px #00FF41',
   },
 };

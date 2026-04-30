@@ -1,11 +1,11 @@
-import { GAME_WIDTH, GAME_HEIGHT, FONT } from '../game/constants.js';
+import { GAME_WIDTH, GAME_HEIGHT, FONT, COLORS } from '../game/constants.js';
 
 export function drawTrail(ctx, trail) {
   for (const t of trail) {
     if (t.life <= 0) continue;
-    ctx.globalAlpha = t.life * 0.12;
-    ctx.fillStyle = '#FF2D95';
-    ctx.fillRect(t.x - 4, t.y - 4, 8, 8);
+    ctx.globalAlpha = t.life * 0.18;
+    ctx.fillStyle = COLORS.GREEN;
+    ctx.fillRect(t.x - 5, t.y - 5, 10, 10);
   }
   ctx.globalAlpha = 1;
 }
@@ -45,7 +45,7 @@ export function drawFlash(ctx, flashAlpha, flashColor) {
 export function drawInfectionClearFlash(ctx, alpha) {
   if (alpha <= 0) return;
   ctx.globalAlpha = alpha * 0.6;
-  ctx.fillStyle = '#39FF14';
+  ctx.fillStyle = COLORS.GREEN;
   ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
   ctx.globalAlpha = 1;
 }
@@ -65,9 +65,9 @@ export function drawGlitch(ctx) {
     const id = ctx.getImageData(0, sy, GAME_WIDTH, sh);
     ctx.putImageData(id, (Math.random() - 0.5) * 14, sy);
     ctx.globalAlpha = 0.15;
-    ctx.fillStyle = '#FF2D95';
+    ctx.fillStyle = COLORS.GREEN;
     ctx.fillRect(0, sy, GAME_WIDTH, sh / 2);
-    ctx.fillStyle = '#00F0FF';
+    ctx.fillStyle = COLORS.PINK;
     ctx.fillRect(0, sy + sh / 2, GAME_WIDTH, sh / 2);
     ctx.globalAlpha = 1;
   } catch { /* tainted canvas guard */ }
@@ -80,14 +80,4 @@ export function drawInfectionOverlay(ctx, frame) {
   ctx.fillStyle = '#FF0020';
   ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
   ctx.globalAlpha = 1;
-}
-
-export function drawMuzzleFlash(ctx, playerLaneX, frame) {
-  if (frame % 12 >= 3) return;
-  const mx = playerLaneX + 14 * 3 - 7 * 3;
-  const my = 540 - 12 * 3 + 3 * 3;  // PLAYER_Y and PX inlined to avoid circular import
-  ctx.shadowColor = '#FF2D95'; ctx.shadowBlur = 12;
-  ctx.fillStyle = '#FF2D95'; ctx.fillRect(mx + 14 * 3, my, 3 * 2, 3);
-  ctx.fillStyle = '#fff';     ctx.fillRect(mx + 14 * 3, my + 3, 3, 3);
-  ctx.shadowBlur = 0;
 }

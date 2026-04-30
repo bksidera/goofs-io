@@ -1,5 +1,29 @@
 import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
 
+// Matrix rain — vertical columns of green glyphs that scroll downward.
+// Each column owns its own glyph buffer so characters appear to mutate over time.
+const RAIN_GLYPHS = '0123456789ABCDEFアカサタナハマヤラワ@#$%&*+=<>?/\\|';
+const RAIN_COL_W  = 12;
+
+function makeRain() {
+  const cols = Math.ceil(GAME_WIDTH / RAIN_COL_W) + 1;
+  return Array.from({ length: cols }, (_, i) => {
+    const len = 8 + Math.floor(Math.random() * 14);
+    return {
+      x:    i * RAIN_COL_W,
+      y:    Math.random() * GAME_HEIGHT,
+      sp:   0.6 + Math.random() * 1.6,
+      len,
+      glyphs: Array.from({ length: len }, () => RAIN_GLYPHS[Math.floor(Math.random() * RAIN_GLYPHS.length)]),
+      mutateTimer: Math.random() * 200,
+      brightness:  0.4 + Math.random() * 0.5,
+    };
+  });
+}
+
+export const RAIN_COL_WIDTH = RAIN_COL_W;
+export const RAIN_GLYPH_SET = RAIN_GLYPHS;
+
 export const initState = () => ({
   player: { lane: 1, power: 100, peakPower: 100, targetPower: 100, displayPower: 100 },
 
@@ -8,12 +32,7 @@ export const initState = () => ({
   floats: [],
   pops: [],
   trail: [],
-  stars: Array.from({ length: 25 }, () => ({
-    x: Math.random() * GAME_WIDTH,
-    y: Math.random() * GAME_HEIGHT,
-    sp: 0.3 + Math.random() * 0.7,
-    br: 0.1 + Math.random() * 0.25,
-  })),
+  rain: makeRain(),
 
   wave: 1,
   waveGates: 0,
@@ -40,10 +59,10 @@ export const initState = () => ({
   glitchTimer: 0, glitchOn: false,
 
   infected: false,
-  infectionFlash: 0,       // green flash when infection cleared
-  infectionTextTimer: 0,   // drives text scramble every ~500ms
+  infectionFlash: 0,
+  infectionTextTimer: 0,
   scrambleSeed: 0,
 
   decayRate: 0,
-  decayVisual: 0,          // 0-1, used to intensify visuals
+  decayVisual: 0,
 });

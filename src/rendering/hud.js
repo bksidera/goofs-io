@@ -2,7 +2,7 @@ import { GAME_WIDTH, GAME_HEIGHT, FONT } from '../game/constants.js';
 import { clamp } from '../utils/helpers.js';
 import { TUTORIAL_LINES } from '../copy/banks.js';
 
-// Power display color: white → cyan → gold → rainbow shimmer → glitch
+// Power display color: white → green → gold → rainbow shimmer → glitch
 function powerColor(dp, frame) {
   if (dp > 100000) {
     const hue = (frame * 3) % 360;
@@ -10,7 +10,7 @@ function powerColor(dp, frame) {
   }
   if (dp > 10000) return '#FFD700';
   if (dp > 1000)  return '#FFD700';
-  if (dp > 200)   return '#00F0FF';
+  if (dp > 200)   return '#00FF41';
   if (dp < 30)    return '#FF0040';
   return '#fff';
 }
@@ -50,9 +50,11 @@ export function drawHUD(ctx, st) {
 
   // Wave (top-left)
   ctx.font = `bold 11px ${FONT}`;
-  ctx.fillStyle = '#FF2D95';
+  ctx.fillStyle = '#00FF41';
   ctx.textAlign = 'left';
+  ctx.shadowColor = '#00FF41'; ctx.shadowBlur = 6;
   ctx.fillText(`WAVE ${wave}`, 10, 16);
+  ctx.shadowBlur = 0;
 
   // Combo (top-right)
   if (combo >= 2) {
@@ -78,9 +80,9 @@ export function drawHUD(ctx, st) {
   if (waveMsgTimer > 0) {
     ctx.globalAlpha = clamp(waveMsgTimer / 600, 0, 1);
     ctx.font = `bold 14px ${FONT}`;
-    ctx.fillStyle = '#FF2D95';
+    ctx.fillStyle = '#00FF41';
     ctx.textAlign = 'center';
-    ctx.shadowColor = '#FF2D95'; ctx.shadowBlur = 10;
+    ctx.shadowColor = '#00FF41'; ctx.shadowBlur = 10;
     ctx.fillText(waveMsg, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100);
     ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;

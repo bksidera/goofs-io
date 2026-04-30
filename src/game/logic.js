@@ -1,5 +1,5 @@
 import {
-  GAME_WIDTH, GAME_HEIGHT, GATE_HEIGHT, PLAYER_Y, PX, laneX,
+  GAME_HEIGHT, GATE_HEIGHT, PLAYER_Y, PX, laneX,
   getWaveConfig, rollGateType, rollPctValue,
 } from './constants.js';
 import { clamp, randomFrom } from '../utils/helpers.js';
@@ -291,9 +291,6 @@ export function tickLogic(st, dt, spawnPopup, onDeath, setPopups) {
   st.particles = st.particles.filter(p => p.life > 0);
   for (const f of st.floats) { f.y += f.vy; f.life -= 0.016; }
   st.floats = st.floats.filter(f => f.life > 0);
-  for (const s of st.stars) {
-    s.y += s.sp * st.scrollSpeed * (dt / 16);
-    if (s.y > GAME_HEIGHT) { s.y = -2; s.x = Math.random() * GAME_WIDTH; }
-  }
+  // Matrix rain advances inside drawBackground (background.js) — no logic tick needed here.
 }
 
