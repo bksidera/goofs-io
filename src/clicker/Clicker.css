@@ -233,3 +233,126 @@
   color: #f0e8d5;
   margin-top: 8px;
 }
+
+/* ── Screen shake ────────────────────────────────────────────────────────── */
+
+.clicker-root.clicker-shake {
+  animation: clicker-shake 110ms ease-out;
+}
+
+@keyframes clicker-shake {
+  0%   { transform: translate(0, 0); }
+  25%  { transform: translate(-2px, 1px); }
+  50%  { transform: translate(2px, -1px); }
+  75%  { transform: translate(-1px, 2px); }
+  100% { transform: translate(0, 0); }
+}
+
+/* ── FX layer (click particles + floating numbers) ────────────────────────── */
+
+.clicker-root .clicker-fx-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.clicker-root .clicker-fx-cluster {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.clicker-root .clicker-fx-particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  left: -4px;
+  top: -4px;
+  animation: clicker-particle-fly 600ms ease-out forwards;
+  box-shadow: 0 0 8px currentColor;
+}
+
+@keyframes clicker-particle-fly {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0.2); opacity: 0; }
+}
+
+.clicker-root .clicker-floating-number {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  font-family: 'Cinzel', serif;
+  font-size: 1.5em;
+  font-weight: bold;
+  color: #f2c75c;
+  text-shadow: 0 0 8px rgba(242, 199, 92, 0.8), 2px 2px 4px rgba(0, 0, 0, 0.7);
+  animation: clicker-float-up 1100ms ease-out forwards;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+@keyframes clicker-float-up {
+  0%   { transform: translate(-50%, -100%); opacity: 0; }
+  15%  { transform: translate(-50%, -110%); opacity: 1; }
+  100% { transform: translate(-50%, -260%); opacity: 0; }
+}
+
+/* ── Toast stack ──────────────────────────────────────────────────────────── */
+
+.clicker-root .clicker-toast-stack {
+  position: fixed;
+  top: 30px;
+  right: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 1100;
+  pointer-events: none;
+  max-width: 360px;
+}
+
+.clicker-root .clicker-toast {
+  background: #2e2a39;
+  color: #f0e8d5;
+  border: 2px solid #a89a8c;
+  border-radius: 8px;
+  padding: 12px 18px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.95em;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+  animation:
+    clicker-toast-in 280ms ease-out,
+    clicker-toast-out 380ms ease-in 2.82s forwards;
+}
+
+.clicker-root .clicker-toast-milestone {
+  background: linear-gradient(135deg, #d69e2e, #9c731e);
+  border-color: #f2c75c;
+  color: #2e2a39;
+  font-weight: bold;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 25px rgba(242, 199, 92, 0.6), 0 6px 20px rgba(0, 0, 0, 0.6);
+}
+
+@keyframes clicker-toast-in {
+  from { transform: translateX(120%); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes clicker-toast-out {
+  from { transform: translateX(0); opacity: 1; }
+  to   { transform: translateX(120%); opacity: 0; }
+}
+
+/* ── Item card flash (generator purchase feedback) ────────────────────────── */
+
+.clicker-root .clicker-item-card.clicker-flash {
+  animation: clicker-card-flash 600ms ease-out;
+}
+
+@keyframes clicker-card-flash {
+  0%   { box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); }
+  30%  { box-shadow: 0 0 30px rgba(242, 199, 92, 0.95), 0 4px 8px rgba(0, 0, 0, 0.3); background-color: #6f6378; }
+  100% { box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); }
+}
