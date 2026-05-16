@@ -89,6 +89,11 @@ export function calculateClickValue(state) {
     }
   });
 
+  // Steam buff (M3a Option B) — temporary multiplier from a boil.
+  if (isSteamBuffActive(state)) {
+    clickMultiplier *= state.steamBuff.multiplier;
+  }
+
   return clickValue * clickMultiplier;
 }
 
@@ -104,10 +109,22 @@ export const REBOOT_CLICKS_REQUIRED = 25;
 export const REINITIALIZING_MS = 1800;
 
 // Stage-1 temperature mechanic (M3a)
-export const TEMP_PER_CLICK = 5;     // 20 clicks fills the gauge
-export const TEMP_DECAY_PER_SEC = 4; // ~25s to fully decay from boiling
-export const TEMP_BOIL_BONUS = 50;   // small reward — meaningful in stage 1, trivial later
+export const TEMP_PER_CLICK = 5;            // 20 clicks fills the gauge
+export const TEMP_DECAY_PER_SEC = 4;        // ~25s to fully decay from boiling
 export const TEMP_MAX = 100;
+// Reward for boiling: temporary click multiplier buff (M3a Option B).
+// 3× clicks for 8s creates a real "ride the buff" loop instead of a one-shot bonus.
+export const STEAM_BUFF_MULTIPLIER = 3;
+export const STEAM_BUFF_DURATION_MS = 8000;
+
+export function isSteamBuffActive(state, now = Date.now()) {
+  return state.steamBuff != null && now < state.steamBuff.expiresAt;
+}
+
+export function steamBuffRemainingMs(state, now = Date.now()) {
+  if (!isSteamBuffActive(state, now)) return 0;
+  return Math.max(0, state.steamBuff.expiresAt - now);
+}
 
 export function isCrashed(state) {
   return state.crashMode != null;
@@ -138,18 +155,24 @@ export function applyTick(state, tickSeconds, cps) {
   state.totalEarned += earned;
   // Temperature decays over time (floored at 0).
   state.temperature = Math.max(0, (state.temperature ?? 0) - TEMP_DECAY_PER_SEC * tickSeconds);
+  // Expire any spent steam buff.
+  if (state.steamBuff && Date.now() >= state.steamBuff.expiresAt) {
+    state.steamBuff = null;
+  }
   return earned;
 }
 
-// If temperature has reached TEMP_MAX, reset to 0 and award the boil bonus.
-// Returns the bonus amount (or 0 if no boil this tick).
+// If temperature has reached TEMP_MAX, reset to 0 and activate the steam buff
+// (or refresh it if one is already running). Returns true if a boil happened.
 export function checkTemperatureBoil(state) {
-  if (isCrashed(state)) return 0;
-  if ((state.temperature ?? 0) < TEMP_MAX) return 0;
+  if (isCrashed(state)) return false;
+  if ((state.temperature ?? 0) < TEMP_MAX) return false;
   state.temperature = 0;
-  state.currency += TEMP_BOIL_BONUS;
-  state.totalEarned += TEMP_BOIL_BONUS;
-  return TEMP_BOIL_BONUS;
+  state.steamBuff = {
+    multiplier: STEAM_BUFF_MULTIPLIER,
+    expiresAt: Date.now() + STEAM_BUFF_DURATION_MS,
+  };
+  return true;
 }
 
 export function buyGenerator(state, generatorId) {

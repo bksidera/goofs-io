@@ -16,7 +16,11 @@ import {
   getStageOrder,
   isCrashed,
   isRebooting,
+  isSteamBuffActive,
+  steamBuffRemainingMs,
   REINITIALIZING_MS,
+  STEAM_BUFF_MULTIPLIER,
+  STEAM_BUFF_DURATION_MS,
 } from '../game/logic.js';
 import { formatNumber, FALLBACK_TICK_SECONDS } from '../game/constants.js';
 import { useAnimatedNumber } from '../game/useAnimatedNumber.js';
@@ -134,7 +138,7 @@ export default function ClickerScreen() {
       const next = cloneState(prev);
       const earned = calculateClickValue(next);
       applyManualClick(next);
-      const boilBonus = checkTemperatureBoil(next);
+      const boiled = checkTemperatureBoil(next);
       checkNarrativeUnlocks(next);
 
       // Spawn FX outside of setState? Safe to do here — these refs are stable
@@ -143,9 +147,12 @@ export default function ClickerScreen() {
       fxRef.current?.spawn({ type: 'particles', x, y });
       fxRef.current?.spawn({ type: 'float', x, y, value: earned });
 
-      if (boilBonus > 0) {
-        fxRef.current?.spawn({ type: 'float', x, y: y - 40, value: boilBonus });
-        toastRef.current?.push({ text: 'BOILING. STEAM ECONOMY ENGAGED.', kind: 'flavor' });
+      if (boiled) {
+        const seconds = Math.round(STEAM_BUFF_DURATION_MS / 1000);
+        toastRef.current?.push({
+          text: `⚡ STEAM ENGAGED — ${STEAM_BUFF_MULTIPLIER}× CLICKS / ${seconds}s`,
+          kind: 'milestone',
+        });
         flashBoiling();
       }
 
@@ -234,6 +241,9 @@ export default function ClickerScreen() {
   const currencyName = gameData.meta.theme.currency_name;
   const showTempGauge = stageOrder === 1;
   const showWizardAura = stageOrder >= 2;
+  const steamActive = isSteamBuffActive(state);
+  const steamRemainingMs = steamBuffRemainingMs(state);
+  const steamRemainingSec = steamActive ? Math.ceil(steamRemainingMs / 1000) : 0;
 
   return (
     <div className="clicker-root" ref={rootRef}>
@@ -246,7 +256,12 @@ export default function ClickerScreen() {
 
           <div className="clicker-core-wrap">
             {showWizardAura && <WizardAura />}
-            <CoreObject stage={stage} onClick={handleClick} />
+            <CoreObject stage={stage} onClick={handleClick} buffed={steamActive} />
+            {steamActive && (
+              <div className="clicker-steam-badge" aria-live="polite">
+                ⚡ STEAM ×{STEAM_BUFF_MULTIPLIER} — {steamRemainingSec}s
+              </div>
+            )}
           </div>
 
           {showTempGauge && (
