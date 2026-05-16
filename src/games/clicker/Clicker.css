@@ -572,6 +572,104 @@
   to   { opacity: 0.85; transform: translateY(0); }
 }
 
+/* ── Core wrap (hosts aura behind core object) ────────────────────────────── */
+
+.clicker-root .clicker-core-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  width: 100%;
+}
+
+/* ── Temperature gauge (M3a — stage 1 only) ──────────────────────────────── */
+
+.clicker-root .clicker-temp-gauge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 8px 14px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid #a89a8c;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+  color: #f0e8d5;
+  min-width: 280px;
+  transition: box-shadow 200ms ease-out, border-color 200ms ease-out;
+}
+
+.clicker-root .clicker-temp-label {
+  letter-spacing: 3px;
+  color: #d1b48c;
+}
+
+.clicker-root .clicker-temp-track {
+  flex: 1;
+  height: 14px;
+  background: #1a1620;
+  border: 1px solid #5d5464;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.clicker-root .clicker-temp-fill {
+  height: 100%;
+  background: linear-gradient(to right, #4a8fd9, #d69e2e, #e64f3a);
+  transition: width 120ms ease-out;
+  box-shadow: 0 0 6px rgba(214, 158, 46, 0.5) inset;
+}
+
+.clicker-root .clicker-temp-value {
+  min-width: 3.5em;
+  text-align: right;
+  color: #f2c75c;
+}
+
+.clicker-root .clicker-temp-gauge.boiling {
+  border-color: #e64f3a;
+  box-shadow: 0 0 28px rgba(230, 79, 58, 0.8), inset 0 0 18px rgba(230, 79, 58, 0.3);
+  animation: clicker-temp-boil 900ms ease-out;
+}
+
+@keyframes clicker-temp-boil {
+  0%   { transform: scale(1); }
+  20%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+/* ── Wizard aura (M3b — stage 2+) ────────────────────────────────────────── */
+
+.clicker-root .clicker-wizard-aura {
+  position: absolute;
+  inset: -40px 0 0 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.clicker-root .clicker-wizard-mote {
+  position: absolute;
+  bottom: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #f2c75c, rgba(242, 199, 92, 0));
+  box-shadow: 0 0 10px rgba(242, 199, 92, 0.6);
+  animation-name: clicker-mote-drift;
+  animation-timing-function: ease-out;
+  animation-iteration-count: infinite;
+  opacity: 0;
+}
+
+@keyframes clicker-mote-drift {
+  0%   { transform: translateY(40px) scale(0.7); opacity: 0; }
+  20%  { opacity: 0.9; }
+  80%  { opacity: 0.6; }
+  100% { transform: translateY(-280px) scale(0.4); opacity: 0; }
+}
+
 /* ── Item card flash (generator purchase feedback) ────────────────────────── */
 
 .clicker-root .clicker-item-card.clicker-flash {

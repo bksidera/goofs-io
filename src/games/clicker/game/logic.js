@@ -103,6 +103,12 @@ export function calculateClickValue(state) {
 export const REBOOT_CLICKS_REQUIRED = 25;
 export const REINITIALIZING_MS = 1800;
 
+// Stage-1 temperature mechanic (M3a)
+export const TEMP_PER_CLICK = 5;     // 20 clicks fills the gauge
+export const TEMP_DECAY_PER_SEC = 4; // ~25s to fully decay from boiling
+export const TEMP_BOIL_BONUS = 50;   // small reward — meaningful in stage 1, trivial later
+export const TEMP_MAX = 100;
+
 export function isCrashed(state) {
   return state.crashMode != null;
 }
@@ -120,6 +126,8 @@ export function applyManualClick(state) {
   const earned = calculateClickValue(state);
   state.currency += earned;
   state.totalEarned += earned;
+  // Temperature climbs with each click (capped at TEMP_MAX).
+  state.temperature = Math.min(TEMP_MAX, (state.temperature ?? 0) + TEMP_PER_CLICK);
   return earned;
 }
 
@@ -128,7 +136,20 @@ export function applyTick(state, tickSeconds, cps) {
   const earned = cps * tickSeconds;
   state.currency += earned;
   state.totalEarned += earned;
+  // Temperature decays over time (floored at 0).
+  state.temperature = Math.max(0, (state.temperature ?? 0) - TEMP_DECAY_PER_SEC * tickSeconds);
   return earned;
+}
+
+// If temperature has reached TEMP_MAX, reset to 0 and award the boil bonus.
+// Returns the bonus amount (or 0 if no boil this tick).
+export function checkTemperatureBoil(state) {
+  if (isCrashed(state)) return 0;
+  if ((state.temperature ?? 0) < TEMP_MAX) return 0;
+  state.temperature = 0;
+  state.currency += TEMP_BOIL_BONUS;
+  state.totalEarned += TEMP_BOIL_BONUS;
+  return TEMP_BOIL_BONUS;
 }
 
 export function buyGenerator(state, generatorId) {

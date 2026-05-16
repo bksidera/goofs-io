@@ -11,7 +11,9 @@ import {
   buyGenerator,
   buyUpgrade,
   checkNarrativeUnlocks,
+  checkTemperatureBoil,
   getStage,
+  getStageOrder,
   isCrashed,
   isRebooting,
   REINITIALIZING_MS,
@@ -33,6 +35,8 @@ import NarrativePanel from '../components/NarrativePanel.jsx';
 import FxLayer from '../components/FxLayer.jsx';
 import Toast from '../components/Toast.jsx';
 import SystemCrashOverlay from '../components/SystemCrashOverlay.jsx';
+import TemperatureGauge from '../components/TemperatureGauge.jsx';
+import WizardAura from '../components/WizardAura.jsx';
 
 import '../Clicker.css';
 
@@ -56,11 +60,13 @@ const GENERATOR_FLAVOR_CHANCE = 0.3;
 export default function ClickerScreen() {
   const [state, setState] = useState(initState);
   const [flashGeneratorId, setFlashGeneratorId] = useState(null);
+  const [boiling, setBoiling] = useState(false);
 
   const rootRef = useRef(null);
   const fxRef = useRef(null);
   const toastRef = useRef(null);
   const lastMilestoneRef = useRef(-1);
+  const boilTimeoutRef = useRef(null);
 
   const tickSeconds = gameData.meta.engine.tick_seconds_recommended ?? FALLBACK_TICK_SECONDS;
 
@@ -110,6 +116,12 @@ export default function ClickerScreen() {
     }
   }, [state.totalEarned, triggerShake]);
 
+  const flashBoiling = useCallback(() => {
+    setBoiling(true);
+    if (boilTimeoutRef.current) clearTimeout(boilTimeoutRef.current);
+    boilTimeoutRef.current = setTimeout(() => setBoiling(false), 900);
+  }, []);
+
   // ── Click handler ─────────────────────────────────────────────────────────
   const handleClick = useCallback((event) => {
     // Snapshot the click point from the DOM event before React batches things.
@@ -122,6 +134,7 @@ export default function ClickerScreen() {
       const next = cloneState(prev);
       const earned = calculateClickValue(next);
       applyManualClick(next);
+      const boilBonus = checkTemperatureBoil(next);
       checkNarrativeUnlocks(next);
 
       // Spawn FX outside of setState? Safe to do here — these refs are stable
@@ -130,11 +143,22 @@ export default function ClickerScreen() {
       fxRef.current?.spawn({ type: 'particles', x, y });
       fxRef.current?.spawn({ type: 'float', x, y, value: earned });
 
+      if (boilBonus > 0) {
+        fxRef.current?.spawn({ type: 'float', x, y: y - 40, value: boilBonus });
+        toastRef.current?.push({ text: 'BOILING. STEAM ECONOMY ENGAGED.', kind: 'flavor' });
+        flashBoiling();
+      }
+
       return next;
     });
 
     triggerShake();
-  }, [triggerShake]);
+  }, [triggerShake, flashBoiling]);
+
+  // Cleanup the boil timeout on unmount
+  useEffect(() => () => {
+    if (boilTimeoutRef.current) clearTimeout(boilTimeoutRef.current);
+  }, []);
 
   // ── Reboot click (during system crash) ────────────────────────────────────
   const handleRebootClick = useCallback((event) => {
@@ -205,8 +229,11 @@ export default function ClickerScreen() {
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const stage = getStage(state.narrativeStage);
+  const stageOrder = getStageOrder(state.narrativeStage);
   const cps = calculateCPS(state);
   const currencyName = gameData.meta.theme.currency_name;
+  const showTempGauge = stageOrder === 1;
+  const showWizardAura = stageOrder >= 2;
 
   return (
     <div className="clicker-root" ref={rootRef}>
@@ -217,7 +244,14 @@ export default function ClickerScreen() {
           </h1>
           <p className="clicker-cps">{formatNumber(cps)} / sec</p>
 
-          <CoreObject stage={stage} onClick={handleClick} />
+          <div className="clicker-core-wrap">
+            {showWizardAura && <WizardAura />}
+            <CoreObject stage={stage} onClick={handleClick} />
+          </div>
+
+          {showTempGauge && (
+            <TemperatureGauge temperature={state.temperature} boiling={boiling} />
+          )}
 
           {/* Pass the stage id as flashKey so NarrativePanel re-flashes on advance. */}
           <NarrativePanel stage={stage} flashKey={state.narrativeStage} />

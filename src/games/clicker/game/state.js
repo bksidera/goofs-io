@@ -19,7 +19,10 @@ export function initState() {
     narrativeStage: 'stage1',
     buyAmount: 1,
     // When non-null, the game is paused in a system-crash reboot screen.
-    // Shape: { pendingStage: 'stageN', clicksDone: 0, clicksRequired: 50 }
+    // Shape: { phase, pendingStage, clicksDone, clicksRequired }
     crashMode: null,
+    // Stage-1 mechanic. 0-100; fills on clicks, decays at idle. Boils at 100.
+    // Survives past stage 1 but the gauge only renders during stage 1.
+    temperature: 0,
   };
 }
