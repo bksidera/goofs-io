@@ -36,6 +36,18 @@ export const GENERATOR_PURCHASES = [
   'OPSEC: COMPROMISED.',
 ];
 
+// System crash flavor text — shown on the reboot overlay. Keyed by the
+// destination stage (the stage you're rebooting INTO).
+export const STAGE_CRASH_LINES = {
+  stage2: 'DIVINE_INTERVENTION.EXE NOT FOUND. INITIATING WIZARD PROTOCOL.',
+  stage3: 'CAT.WAV CORRUPTED ALL FILES. AUTOMATION WAS A SIDE EFFECT.',
+  stage4: 'COMMODITY DETECTED. WEIGHT VECTOR EXCEEDS PARSEC THRESHOLD.',
+  stage5: 'MERGING TIMELINES. PLEASE DO NOT TURN OFF YOUR ETHEREUM.',
+  stage6: 'GOODWILL.LOCATION.MIAMI VERIFIED. FLAMETHROWER ARMED.',
+  stage7: 'PRESSURE THRESHOLD EXCEEDED. CRYSTALLIZATION IMMINENT.',
+  stage8: 'QUANTUM ANOMALY DETECTED. ENCRYPTION INTEGRITY: 0%. PRAY.',
+};
+
 export function randomFrom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }

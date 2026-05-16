@@ -18,5 +18,8 @@ export function initState() {
     },
     narrativeStage: 'stage1',
     buyAmount: 1,
+    // When non-null, the game is paused in a system-crash reboot screen.
+    // Shape: { pendingStage: 'stageN', clicksDone: 0, clicksRequired: 50 }
+    crashMode: null,
   };
 }

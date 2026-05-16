@@ -92,7 +92,17 @@ export function calculateClickValue(state) {
   return clickValue * clickMultiplier;
 }
 
+// During a crash, all income / purchase actions are blocked. The only
+// permitted interaction is applyRebootClick (driven by the REBOOT button).
+
+export const REBOOT_CLICKS_REQUIRED = 50;
+
+export function isCrashed(state) {
+  return state.crashMode != null;
+}
+
 export function applyManualClick(state) {
+  if (isCrashed(state)) return 0;
   const earned = calculateClickValue(state);
   state.currency += earned;
   state.totalEarned += earned;
@@ -100,6 +110,7 @@ export function applyManualClick(state) {
 }
 
 export function applyTick(state, tickSeconds, cps) {
+  if (isCrashed(state)) return 0;
   const earned = cps * tickSeconds;
   state.currency += earned;
   state.totalEarned += earned;
@@ -107,6 +118,7 @@ export function applyTick(state, tickSeconds, cps) {
 }
 
 export function buyGenerator(state, generatorId) {
+  if (isCrashed(state)) return false;
   const gen = gameData.generators.find(g => g.id === generatorId);
   if (!gen) return false;
   const owned = state.generators[generatorId] || 0;
@@ -118,6 +130,7 @@ export function buyGenerator(state, generatorId) {
 }
 
 export function buyUpgrade(state, upgradeId) {
+  if (isCrashed(state)) return false;
   const u = gameData.upgrades.find(x => x.id === upgradeId);
   if (!u) return false;
   if (state.upgrades.includes(upgradeId)) return false;
@@ -127,8 +140,12 @@ export function buyUpgrade(state, upgradeId) {
   return true;
 }
 
-// Returns the new stage object if advancement happened, otherwise null.
+// Detects whether a stage should advance. Instead of changing narrativeStage
+// directly, it triggers crashMode — the player must REBOOT through the crash
+// to actually enter the new stage.
+// Returns the pending next-stage object if a crash was triggered, else null.
 export function checkNarrativeUnlocks(state) {
+  if (isCrashed(state)) return null;
   const current = getStage(state.narrativeStage);
   if (!current) return null;
   const next = gameData.narrative_stages.find(s => s.order === current.order + 1);
@@ -138,10 +155,28 @@ export function checkNarrativeUnlocks(state) {
   let unlocked = false;
   if (cond.type === 'currency' && state.totalEarned >= cond.value) unlocked = true;
   else if (cond.type === 'auto') unlocked = true;
-
   if (!unlocked) return null;
-  state.narrativeStage = next.id;
+
+  state.crashMode = {
+    pendingStage: next.id,
+    clicksDone: 0,
+    clicksRequired: REBOOT_CLICKS_REQUIRED,
+  };
   return next;
+}
+
+// Player click while in crash mode. Returns the new stage object if the
+// reboot completed on this click, otherwise null.
+export function applyRebootClick(state) {
+  if (!isCrashed(state)) return null;
+  state.crashMode = { ...state.crashMode, clicksDone: state.crashMode.clicksDone + 1 };
+  if (state.crashMode.clicksDone >= state.crashMode.clicksRequired) {
+    const next = getStage(state.crashMode.pendingStage);
+    state.narrativeStage = state.crashMode.pendingStage;
+    state.crashMode = null;
+    return next;
+  }
+  return null;
 }
 
 export function visibleGenerators(state) {
@@ -151,6 +186,36 @@ export function visibleGenerators(state) {
     const s = getStage(g.unlock_condition.value);
     return s && s.order <= order;
   });
+}
+
+// Auto-derives a short, mechanically accurate label from an upgrade's effect.
+// Goal: every upgrade card displays exactly what it does, no ambiguity.
+export function describeEffect(effect) {
+  if (!effect) return '';
+  const { type, target, value } = effect;
+
+  if (type === 'multiplier') {
+    if (target === 'global')             return `×${value} GLOBAL`;
+    if (target === 'currency_per_click') return `×${value} CLICK`;
+    if (target === 'generator_category' && effect.category) {
+      const pct = Math.round((value - 1) * 100);
+      return `+${pct}% ${effect.category.toUpperCase()}`;
+    }
+    if (target === 'generator' && effect.generator_id) {
+      const gen = gameData.generators.find(g => g.id === effect.generator_id);
+      const name = gen?.theme?.name?.toUpperCase() ?? effect.generator_id.toUpperCase();
+      return `×${value} ${name}`;
+    }
+    return `×${value}`;
+  }
+
+  if (type === 'additive') {
+    if (target === 'autoclick_rate') return `+${value}/s AUTO`;
+    if (target === 'legacy_bonus')   return `+${Math.round(value * 100)}% LEGACY (NEXT RUN)`;
+    return `+${value}`;
+  }
+
+  return '';
 }
 
 export function visibleUpgrades(state) {

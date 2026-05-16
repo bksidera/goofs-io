@@ -6,10 +6,12 @@ import {
   calculateClickValue,
   applyManualClick,
   applyTick,
+  applyRebootClick,
   buyGenerator,
   buyUpgrade,
   checkNarrativeUnlocks,
   getStage,
+  isCrashed,
 } from '../game/logic.js';
 import { formatNumber, FALLBACK_TICK_SECONDS } from '../game/constants.js';
 import { useAnimatedNumber } from '../game/useAnimatedNumber.js';
@@ -27,6 +29,7 @@ import UpgradeList from '../components/UpgradeList.jsx';
 import NarrativePanel from '../components/NarrativePanel.jsx';
 import FxLayer from '../components/FxLayer.jsx';
 import Toast from '../components/Toast.jsx';
+import SystemCrashOverlay from '../components/SystemCrashOverlay.jsx';
 
 import '../Clicker.css';
 
@@ -111,6 +114,8 @@ export default function ClickerScreen() {
     const y = event?.clientY ?? window.innerHeight / 2;
 
     setState(prev => {
+      // During a crash, the glass click is inert. UI also disables it visually.
+      if (isCrashed(prev)) return prev;
       const next = cloneState(prev);
       const earned = calculateClickValue(next);
       applyManualClick(next);
@@ -122,6 +127,31 @@ export default function ClickerScreen() {
       fxRef.current?.spawn({ type: 'particles', x, y });
       fxRef.current?.spawn({ type: 'float', x, y, value: earned });
 
+      return next;
+    });
+
+    triggerShake();
+  }, [triggerShake]);
+
+  // ── Reboot click (during system crash) ────────────────────────────────────
+  const handleRebootClick = useCallback((event) => {
+    const x = event?.clientX ?? window.innerWidth / 2;
+    const y = event?.clientY ?? window.innerHeight / 2;
+
+    setState(prev => {
+      if (!isCrashed(prev)) return prev;
+      const next = cloneState(prev);
+      const advancedStage = applyRebootClick(next);
+
+      // Green particles to keep the crash visually distinct from gold clicks.
+      fxRef.current?.spawn({ type: 'particles', x, y, color: '#39FF14' });
+
+      if (advancedStage) {
+        toastRef.current?.push({
+          text: `SYSTEM RESTORED. ENTERING: ${advancedStage.theme.name.toUpperCase()}`,
+          kind: 'milestone',
+        });
+      }
       return next;
     });
 
@@ -191,6 +221,7 @@ export default function ClickerScreen() {
 
       <FxLayer ref={fxRef} />
       <Toast ref={toastRef} />
+      <SystemCrashOverlay crashMode={state.crashMode} onRebootClick={handleRebootClick} />
     </div>
   );
 }
