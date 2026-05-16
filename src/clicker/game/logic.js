@@ -94,11 +94,25 @@ export function calculateClickValue(state) {
 
 // During a crash, all income / purchase actions are blocked. The only
 // permitted interaction is applyRebootClick (driven by the REBOOT button).
+//
+// crashMode has two phases:
+//   - 'rebooting': player must click REBOOT button N times to fill the bar
+//   - 'reinitializing': bar is full, brief interstitial plays, then the
+//     stage actually advances via completeReboot()
 
-export const REBOOT_CLICKS_REQUIRED = 50;
+export const REBOOT_CLICKS_REQUIRED = 25;
+export const REINITIALIZING_MS = 1800;
 
 export function isCrashed(state) {
   return state.crashMode != null;
+}
+
+export function isRebooting(state) {
+  return state.crashMode?.phase === 'rebooting';
+}
+
+export function isReinitializing(state) {
+  return state.crashMode?.phase === 'reinitializing';
 }
 
 export function applyManualClick(state) {
@@ -158,6 +172,7 @@ export function checkNarrativeUnlocks(state) {
   if (!unlocked) return null;
 
   state.crashMode = {
+    phase: 'rebooting',
     pendingStage: next.id,
     clicksDone: 0,
     clicksRequired: REBOOT_CLICKS_REQUIRED,
@@ -165,18 +180,28 @@ export function checkNarrativeUnlocks(state) {
   return next;
 }
 
-// Player click while in crash mode. Returns the new stage object if the
-// reboot completed on this click, otherwise null.
+// Player click while in crash mode. Increments the reboot counter and, when
+// the bar fills, transitions crashMode into 'reinitializing' (without yet
+// advancing the stage). Returns the new phase if it changed, else null.
 export function applyRebootClick(state) {
-  if (!isCrashed(state)) return null;
-  state.crashMode = { ...state.crashMode, clicksDone: state.crashMode.clicksDone + 1 };
-  if (state.crashMode.clicksDone >= state.crashMode.clicksRequired) {
-    const next = getStage(state.crashMode.pendingStage);
-    state.narrativeStage = state.crashMode.pendingStage;
-    state.crashMode = null;
-    return next;
+  if (!isRebooting(state)) return null;
+  const clicksDone = state.crashMode.clicksDone + 1;
+  if (clicksDone >= state.crashMode.clicksRequired) {
+    state.crashMode = { ...state.crashMode, clicksDone, phase: 'reinitializing' };
+    return 'reinitializing';
   }
+  state.crashMode = { ...state.crashMode, clicksDone };
   return null;
+}
+
+// Finalizes a stage advance after the reinitializing interstitial completes.
+// Returns the now-active stage object so callers can fire celebration FX.
+export function completeReboot(state) {
+  if (!isReinitializing(state)) return null;
+  const next = getStage(state.crashMode.pendingStage);
+  state.narrativeStage = state.crashMode.pendingStage;
+  state.crashMode = null;
+  return next;
 }
 
 export function visibleGenerators(state) {

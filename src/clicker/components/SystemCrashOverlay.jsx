@@ -1,16 +1,41 @@
-import { STAGE_CRASH_LINES } from '../copy/banks.js';
+import { STAGE_CRASH_LINES, STAGE_LOADING_LINES } from '../copy/banks.js';
+import { gameData } from '../game/state.js';
 
-// Renders the full-screen crash + reboot prompt. Pure: takes crashMode +
-// onRebootClick, displays glitch UI, calls back on each REBOOT click.
+// Two-phase crash overlay:
+//   - 'rebooting'      → glitch header + REBOOT button + click progress bar
+//   - 'reinitializing' → full bar + animated loader + stage-name reveal
 export default function SystemCrashOverlay({ crashMode, onRebootClick }) {
   if (!crashMode) return null;
 
-  const { pendingStage, clicksDone, clicksRequired } = crashMode;
-  const flavor = STAGE_CRASH_LINES[pendingStage] ?? 'SYSTEM INTEGRITY COMPROMISED.';
+  const { phase, pendingStage, clicksDone, clicksRequired } = crashMode;
   const progressCells = 20;
-  const filled = Math.round((clicksDone / clicksRequired) * progressCells);
+  const filled =
+    phase === 'reinitializing'
+      ? progressCells
+      : Math.round((clicksDone / clicksRequired) * progressCells);
   const bar = '█'.repeat(filled) + '░'.repeat(progressCells - filled);
 
+  if (phase === 'reinitializing') {
+    const loading = STAGE_LOADING_LINES[pendingStage] ?? 'MOUNTING NEW STAGE';
+    const nextStageName =
+      gameData.narrative_stages.find(s => s.id === pendingStage)?.theme?.name ?? '';
+    return (
+      <div className="clicker-crash-overlay" role="dialog" aria-label="System reinitializing">
+        <div className="clicker-crash-scanlines" aria-hidden="true" />
+        <div className="clicker-crash-content">
+          <div className="clicker-crash-header" data-text="REINITIALIZING">REINITIALIZING</div>
+          <pre className="clicker-crash-flavor">{loading}<span className="clicker-loader-dots" /></pre>
+          <div className="clicker-crash-progress">
+            <pre className="clicker-crash-bar">[{bar}]</pre>
+            <div className="clicker-crash-count">SYSTEM READY</div>
+          </div>
+          <pre className="clicker-crash-loading-stage">LOADING: {nextStageName.toUpperCase()}</pre>
+        </div>
+      </div>
+    );
+  }
+
+  const flavor = STAGE_CRASH_LINES[pendingStage] ?? 'SYSTEM INTEGRITY COMPROMISED.';
   return (
     <div className="clicker-crash-overlay" role="dialog" aria-label="System crash">
       <div className="clicker-crash-scanlines" aria-hidden="true" />

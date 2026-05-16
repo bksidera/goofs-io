@@ -48,6 +48,18 @@ export const STAGE_CRASH_LINES = {
   stage8: 'QUANTUM ANOMALY DETECTED. ENCRYPTION INTEGRITY: 0%. PRAY.',
 };
 
+// Reinitializing-phase subtext — shown briefly after the REBOOT bar fills,
+// before the new stage actually loads. Keyed by destination stage.
+export const STAGE_LOADING_LINES = {
+  stage2: 'INVOKING WIZARD SUBROUTINES',
+  stage3: 'INSTALLING CHAOS DRIVER',
+  stage4: 'ALLOCATING ROCK MEMORY',
+  stage5: 'MERGING CHAIN STATE',
+  stage6: 'IGNITING HEAT SOURCE',
+  stage7: 'COMPRESSING CARBON LATTICE',
+  stage8: 'BREAKING ENCRYPTION (PLEASE WAIT)',
+};
+
 export function randomFrom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }

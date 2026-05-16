@@ -7,11 +7,14 @@ import {
   applyManualClick,
   applyTick,
   applyRebootClick,
+  completeReboot,
   buyGenerator,
   buyUpgrade,
   checkNarrativeUnlocks,
   getStage,
   isCrashed,
+  isRebooting,
+  REINITIALIZING_MS,
 } from '../game/logic.js';
 import { formatNumber, FALLBACK_TICK_SECONDS } from '../game/constants.js';
 import { useAnimatedNumber } from '../game/useAnimatedNumber.js';
@@ -139,24 +142,39 @@ export default function ClickerScreen() {
     const y = event?.clientY ?? window.innerHeight / 2;
 
     setState(prev => {
-      if (!isCrashed(prev)) return prev;
+      // Only active during the rebooting phase; reinitializing phase ignores clicks.
+      if (!isRebooting(prev)) return prev;
       const next = cloneState(prev);
-      const advancedStage = applyRebootClick(next);
-
+      applyRebootClick(next);
       // Green particles to keep the crash visually distinct from gold clicks.
       fxRef.current?.spawn({ type: 'particles', x, y, color: '#39FF14' });
-
-      if (advancedStage) {
-        toastRef.current?.push({
-          text: `SYSTEM RESTORED. ENTERING: ${advancedStage.theme.name.toUpperCase()}`,
-          kind: 'milestone',
-        });
-      }
       return next;
     });
 
     triggerShake();
   }, [triggerShake]);
+
+  // ── Reinitializing → completion transition ───────────────────────────────
+  // When crashMode flips to 'reinitializing', wait REINITIALIZING_MS then
+  // finalize the stage advance and fire the celebratory milestone toast.
+  useEffect(() => {
+    if (state.crashMode?.phase !== 'reinitializing') return;
+    const timeoutId = setTimeout(() => {
+      setState(prev => {
+        if (prev.crashMode?.phase !== 'reinitializing') return prev;
+        const next = cloneState(prev);
+        const advancedStage = completeReboot(next);
+        if (advancedStage) {
+          toastRef.current?.push({
+            text: `SYSTEM RESTORED. ENTERING: ${advancedStage.theme.name.toUpperCase()}`,
+            kind: 'milestone',
+          });
+        }
+        return next;
+      });
+    }, REINITIALIZING_MS);
+    return () => clearTimeout(timeoutId);
+  }, [state.crashMode?.phase]);
 
   // ── Buy handlers ──────────────────────────────────────────────────────────
   const handleBuyGen = useCallback(id => {
