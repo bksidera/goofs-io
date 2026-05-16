@@ -1,6 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import AdGameExe from './AdGame.jsx';
-import Clicker from './Clicker.jsx';
+import { games } from './games/registry.js';
 
 function Home() {
   return (
@@ -11,23 +10,17 @@ function Home() {
       </div>
 
       <div style={S.grid}>
-        <GameCard
-          title="AdGame.exe"
-          desc="The game from the mobile ad that doesn't exist. Except now it does. Survive the gates. Dodge the popups. Trust nothing."
-          tags={['runner', 'free', 'no ads']}
-          badge="PLAYABLE"
-          to="/adgame"
-          color="#FF2D95"
-        />
-
-        <GameCard
-          title="Crypto Clicker"
-          desc="Mine the bubble. Survive the apocalypse. A satirical idle game where the only real value is the experience of having lived through it all."
-          tags={['idle', 'satire', 'wip']}
-          badge="ALPHA"
-          to="/clicker"
-          color="#F2C75C"
-        />
+        {games.map(g => (
+          <GameCard
+            key={g.slug}
+            title={g.title}
+            desc={g.description}
+            tags={g.tags}
+            badge={g.badge}
+            to={`/${g.slug}`}
+            color={g.color}
+          />
+        ))}
       </div>
 
       <div style={S.footer}>
@@ -72,29 +65,14 @@ function GameCard({ title, desc, tags, badge, to, color }) {
   );
 }
 
-function ComingSoonCard({ title, desc, color }) {
-  return (
-    <div style={{ ...S.card, borderColor: color + '22', opacity: 0.4, cursor: 'default' }}>
-      <div style={{ fontSize: 22, fontWeight: 900, color, fontFamily: 'monospace', marginBottom: 12, lineHeight: 1 }}>
-        {title}
-      </div>
-      <div style={{ fontSize: 12, color: '#555', fontFamily: 'monospace', lineHeight: 1.6 }}>
-        {desc}
-      </div>
-      <div style={{ marginTop: 16, fontSize: 10, color: '#333', fontFamily: 'monospace', letterSpacing: 2 }}>
-        COMPILING...
-      </div>
-    </div>
-  );
-}
-
 export default function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/"        element={<Home />} />
-        <Route path="/adgame"  element={<AdGameExe />} />
-        <Route path="/clicker" element={<Clicker />} />
+        <Route path="/" element={<Home />} />
+        {games.map(g => (
+          <Route key={g.slug} path={`/${g.slug}`} element={<g.component />} />
+        ))}
       </Routes>
     </Router>
   );
