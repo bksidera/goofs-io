@@ -75,7 +75,15 @@ export function calculateCPS(state) {
     });
   }
 
-  return baseCps * globalMultiplier + additiveAutoclick;
+  let total = baseCps * globalMultiplier + additiveAutoclick;
+
+  // Steam buff (M3a Option B) multiplies ALL income during its window —
+  // generator output and additive autoclick alike — not just manual clicks.
+  if (isSteamBuffActive(state)) {
+    total *= state.steamBuff.multiplier;
+  }
+
+  return total;
 }
 
 export function calculateClickValue(state) {
