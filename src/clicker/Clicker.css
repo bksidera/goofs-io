@@ -1,0 +1,235 @@
+/* Scoped under .clicker-root so it doesn't leak into the hub */
+
+.clicker-root {
+  font-family: 'Cinzel Decorative', serif;
+  background-color: #2e2a39;
+  color: #f0e8d5;
+  min-height: 100vh;
+  padding: 30px;
+  font-size: 1.1em;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.clicker-root .clicker-container {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 50px;
+  max-width: 1300px;
+  width: 100%;
+  border: 4px solid #a89a8c;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.1);
+  padding: 30px;
+  background-color: #5d5464;
+  border-radius: 10px;
+}
+
+.clicker-root .clicker-main {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.clicker-root .clicker-sidebar {
+  background-color: transparent;
+  border-left: 2px dashed #a89a8c;
+  padding-left: 30px;
+}
+
+.clicker-root .clicker-currency {
+  font-family: 'Cinzel', serif;
+  font-size: 3.5em;
+  font-weight: bold;
+  color: #f2c75c;
+  text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+  margin-bottom: 0;
+}
+
+.clicker-root .clicker-cps {
+  font-size: 1.3em;
+  color: #d1b48c;
+  margin-top: 5px;
+}
+
+.clicker-root .clicker-section-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.8em;
+  font-weight: bold;
+  color: #f0e8d5;
+  margin-bottom: 20px;
+  padding-bottom: 5px;
+  border-bottom: 2px solid #a89a8c;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.clicker-root .clicker-narrative-panel {
+  background-color: #f0e8d5;
+  color: #333;
+  padding: 20px;
+  border: 3px solid #a89a8c;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  margin-top: 25px;
+  border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Core clickable */
+
+.clicker-root .clicker-core-button {
+  cursor: pointer;
+  margin-top: 40px;
+  border: 3px solid #a89a8c;
+  background: linear-gradient(to bottom, #d69e2e, #9c731e);
+  padding: 12px 30px;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-family: 'Cinzel', serif;
+  font-size: 1.5em;
+  text-transform: uppercase;
+  transition: transform 0.1s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.clicker-root .clicker-core-button:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+.clicker-root .clicker-core-object {
+  border: 4px solid #a89a8c;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7rem;
+  line-height: 1;
+  background: rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease, background 0.4s ease, box-shadow 0.4s ease;
+  user-select: none;
+}
+
+.clicker-root .clicker-core-button:active .clicker-core-object {
+  transform: scale(0.95);
+}
+
+.clicker-root .stage-1 .clicker-core-object { background: radial-gradient(circle, #5fa8d3, #2c3e50); }
+.clicker-root .stage-2 .clicker-core-object { background: radial-gradient(circle, #8b1a3a, #2a0a14); box-shadow: 0 0 30px rgba(242, 199, 92, 0.6); }
+.clicker-root .stage-3 .clicker-core-object { background: radial-gradient(circle, #d68fc4, #4a2a4a); box-shadow: 0 0 30px rgba(255, 105, 180, 0.5); }
+.clicker-root .stage-4 .clicker-core-object { background: radial-gradient(circle, #6b6b6b, #1a1a1a); box-shadow: 0 0 30px rgba(120, 200, 255, 0.5); }
+.clicker-root .stage-5 .clicker-core-object { background: radial-gradient(circle, #b294ff, #2a1a4a); box-shadow: 0 0 30px rgba(178, 148, 255, 0.7); }
+.clicker-root .stage-6 .clicker-core-object { background: radial-gradient(circle, #ff6b35, #4a0a0a); box-shadow: 0 0 35px rgba(255, 107, 53, 0.8); }
+.clicker-root .stage-7 .clicker-core-object { background: linear-gradient(135deg, #ff61a6, #66ffe0, #ffd166); box-shadow: 0 0 40px rgba(255, 209, 102, 0.8); }
+.clicker-root .stage-8 .clicker-core-object { background: radial-gradient(circle, #2d4a2d, #0a1a0a); box-shadow: 0 0 30px rgba(100, 200, 100, 0.5); }
+
+/* Narrative flash */
+
+.clicker-root .clicker-narrative-panel.flash {
+  animation: clicker-narrative-flash 2s ease-out;
+}
+
+@keyframes clicker-narrative-flash {
+  0%   { box-shadow: 0 0 0 rgba(242, 199, 92, 0); background-color: #f0e8d5; }
+  20%  { box-shadow: 0 0 40px rgba(242, 199, 92, 1); background-color: #fff8d5; }
+  100% { box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); background-color: #f0e8d5; }
+}
+
+/* Buy amount toggle */
+
+.clicker-root .clicker-buy-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.clicker-root .clicker-buy-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: #3a3344;
+  color: #d1b48c;
+  border: 2px solid #a89a8c;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  font-size: 1em;
+  transition: all 0.15s ease;
+}
+
+.clicker-root .clicker-buy-btn:hover {
+  background: #4a4358;
+}
+
+.clicker-root .clicker-buy-btn.active {
+  background: #d69e2e;
+  color: #2e2a39;
+  border-color: #f2c75c;
+  box-shadow: 0 0 10px rgba(242, 199, 92, 0.5);
+}
+
+/* Item cards */
+
+.clicker-root .clicker-item-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.clicker-root .clicker-item-card {
+  background-color: #5d5464;
+  padding: 20px;
+  border: 2px solid #a89a8c;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+}
+
+.clicker-root .clicker-item-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+}
+
+.clicker-root .clicker-item-card.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  border-color: #777;
+  filter: grayscale(80%);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transform: none;
+}
+
+.clicker-root .clicker-item-card.disabled:hover {
+  transform: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.clicker-root .clicker-item-card h4 {
+  margin: 0 0 8px 0;
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #f2c75c;
+}
+
+.clicker-root .clicker-item-card p {
+  margin: 0;
+  font-size: 0.9em;
+  color: #e0d8c7;
+}
+
+.clicker-root .clicker-item-cost {
+  font-weight: bold;
+  color: #f0e8d5;
+  margin-top: 8px;
+}

@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import AdGameExe from './AdGame.jsx';
+import Clicker from './Clicker.jsx';
 
 function Home() {
   return (
@@ -19,10 +20,13 @@ function Home() {
           color="#FF2D95"
         />
 
-        <ComingSoonCard
-          title="???.exe"
-          desc="Something is being compiled. Check back later."
-          color="#00F0FF"
+        <GameCard
+          title="Crypto Clicker"
+          desc="Mine the bubble. Survive the apocalypse. A satirical idle game where the only real value is the experience of having lived through it all."
+          tags={['idle', 'satire', 'wip']}
+          badge="ALPHA"
+          to="/clicker"
+          color="#F2C75C"
         />
       </div>
 
@@ -90,6 +94,7 @@ export default function App() {
       <Routes>
         <Route path="/"        element={<Home />} />
         <Route path="/adgame"  element={<AdGameExe />} />
+        <Route path="/clicker" element={<Clicker />} />
       </Routes>
     </Router>
   );
