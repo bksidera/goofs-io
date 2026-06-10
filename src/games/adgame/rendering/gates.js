@@ -94,11 +94,19 @@ function drawGun(ctx, cx, cy, frame, variant) {
   ctx.restore();
 }
 
-// Golden data cube — pulsing, glowing, the chef's kiss reward
-function drawCube(ctx, cx, cy, frame) {
+// Golden data cube — pulsing, glowing, the chef's kiss reward.
+// When `tell` is set (trap in disguise), the cube has a learnable flaw:
+// every ~1.5s its glow stutters out for a beat and hairline cracks flash.
+// Observant players can spot a counterfeit; deception becomes a skill.
+function drawCube(ctx, cx, cy, frame, tell = false, tellPhase = 0) {
   const s = PX;
-  const pulse = 0.7 + Math.sin(frame * 0.18) * 0.3;
+  let pulse = 0.7 + Math.sin(frame * 0.18) * 0.3;
   const wobble = Math.sin(frame * 0.1) * 1.5;
+
+  // The tell window: a brief glow dropout on a per-gate phase offset.
+  const tellT = tell ? (frame * 0.033 + tellPhase) % 1.5 : 1;
+  const telling = tell && tellT < 0.22;
+  if (telling) pulse *= 0.25;
 
   // Floor halo
   ctx.save();
@@ -140,11 +148,26 @@ function drawCube(ctx, cx, cy, frame) {
   ctx.shadowBlur = 14 * pulse;
   paintRows(ctx, ox, oy, rows, pal);
   ctx.shadowBlur = 0;
+
+  // Counterfeit cracks — only visible during the tell window.
+  if (telling) {
+    ctx.strokeStyle = 'rgba(60, 30, 0, 0.85)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 12, cy - 8 + wobble);
+    ctx.lineTo(cx - 2, cy + wobble);
+    ctx.lineTo(cx - 8, cy + 10 + wobble);
+    ctx.moveTo(cx + 10, cy - 10 + wobble);
+    ctx.lineTo(cx + 4, cy - 1 + wobble);
+    ctx.lineTo(cx + 12, cy + 7 + wobble);
+    ctx.stroke();
+  }
   ctx.restore();
 
-  // Sparkle dots — orbit
+  // Sparkle dots — orbit (counterfeits sparkle less)
   const sparkleAngle = frame * 0.06;
-  for (let k = 0; k < 3; k++) {
+  const sparkles = tell ? 2 : 3;
+  for (let k = 0; k < sparkles; k++) {
     const a = sparkleAngle + (k * Math.PI * 2) / 3;
     const sx = cx + Math.cos(a) * 22;
     const sy = cy + Math.sin(a) * 22;
@@ -267,7 +290,7 @@ function drawValueBadge(ctx, cx, cyBottom, text, color) {
 //   scrambleActive — overlay scrambled text on infected objects
 //   variant        — small int for sprite variation (gun style, drone palette, etc.)
 
-export function drawGate(ctx, cx, yTop, text, type, revealed, frame, infected, scrambleActive, variant = 0) {
+export function drawGate(ctx, cx, yTop, text, type, revealed, frame, infected, scrambleActive, variant = 0, tellPhase = 0) {
   const cy = yTop + OBJECT_SIZE / 2;
 
   // Render sprite per type
@@ -279,7 +302,7 @@ export function drawGate(ctx, cx, yTop, text, type, revealed, frame, infected, s
     drawCube(ctx, cx, cy, frame);
   } else if (type === 'trap') {
     if (revealed) drawBomb(ctx, cx, cy, frame);
-    else          drawCube(ctx, cx, cy, frame);   // identical to multiply until hit
+    else          drawCube(ctx, cx, cy, frame, true, tellPhase); // counterfeit — has a tell
   } else if (type === 'mystery') {
     drawMystery(ctx, cx, cy, frame);
   }

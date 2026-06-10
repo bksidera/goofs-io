@@ -2,67 +2,91 @@ import { GAME_WIDTH, GAME_HEIGHT, FONT } from '../game/constants.js';
 import { clamp } from '../utils/helpers.js';
 import { TUTORIAL_LINES } from '../copy/banks.js';
 
-// Power display color: white → green → gold → rainbow shimmer → glitch
-function powerColor(dp, frame) {
-  if (dp > 100000) {
+// Power display color: scales with % of the level cap now that one exists.
+function powerColor(dp, cap, frame) {
+  const pct = dp / Math.max(1, cap);
+  if (pct >= 0.999) {
     const hue = (frame * 3) % 360;
-    return `hsl(${hue}, 100%, 65%)`;
+    return `hsl(${hue}, 100%, 65%)`; // pinned at cap: rainbow shimmer
   }
-  if (dp > 10000) return '#FFD700';
-  if (dp > 1000)  return '#FFD700';
-  if (dp > 200)   return '#00FF41';
-  if (dp < 30)    return '#FF0040';
+  if (pct > 0.6) return '#FFD700';
+  if (pct > 0.25) return '#00FF41';
+  if (dp < 40) return '#FF0040';
   return '#fff';
 }
 
-export function drawHUD(ctx, st) {
-  const { player, wave, combo, showTut, tutIdx, waveMsg, waveMsgTimer, decayRate, frame } = st;
+export function drawHUD(ctx, st, cfg) {
+  const { player, combo, showTut, tutIdx, waveMsg, waveMsgTimer, frame } = st;
   const dp = Math.round(player.displayPower);
-  const pc = powerColor(dp, frame);
+  const cap = cfg.powerCap;
+  const pc = powerColor(dp, cap, frame);
 
-  // Power number
-  const fs = dp > 99999 ? 22 : dp > 9999 ? 26 : dp > 999 ? 30 : 36;
+  // ── Power number ───────────────────────────────────────────────────────────
+  const fs = dp > 9999 ? 26 : dp > 999 ? 30 : 36;
   ctx.font = `bold ${fs}px ${FONT}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.shadowColor = pc; ctx.shadowBlur = 15;
   ctx.fillStyle = pc;
-
-  // Glitch offset at extreme power
-  const glitchOff = dp > 100000 && frame % 30 < 3 ? (Math.random() - 0.5) * 4 : 0;
-  ctx.fillText(dp.toLocaleString(), GAME_WIDTH / 2 + glitchOff, 38);
+  const atCap = dp >= cap;
+  const glitchOff = atCap && frame % 30 < 3 ? (Math.random() - 0.5) * 4 : 0;
+  ctx.fillText(dp.toLocaleString(), GAME_WIDTH / 2 + glitchOff, 34);
   ctx.shadowBlur = 0;
 
-  ctx.font = `9px ${FONT}`;
-  ctx.fillStyle = '#555';
-  ctx.fillText('POWER', GAME_WIDTH / 2, 56);
+  // ── Power bar (the cap makes a bar meaningful) ─────────────────────────────
+  const bw = 170;
+  const bx = (GAME_WIDTH - bw) / 2;
+  const by = 52;
+  const pct = clamp(dp / cap, 0, 1);
+  ctx.fillStyle = 'rgba(255,255,255,0.07)';
+  ctx.fillRect(bx, by, bw, 6);
+  ctx.fillStyle = pc;
+  ctx.shadowColor = pc; ctx.shadowBlur = 6;
+  ctx.fillRect(bx, by, bw * pct, 6);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(bx - 0.5, by - 0.5, bw + 1, 7);
 
-  // Decay indicator (wave 4+)
-  if (decayRate > 0) {
+  ctx.font = `8px ${FONT}`;
+  ctx.fillStyle = '#555';
+  ctx.textAlign = 'center';
+  ctx.fillText(atCap ? 'POWER (MAXED — OVERFLOW → SCORE)' : 'POWER', GAME_WIDTH / 2, by + 14);
+
+  // Decay indicator
+  if (cfg.decayPct > 0 && st.levelPhase === 'running') {
+    const drain = Math.max(cfg.decayFloor, dp * (cfg.decayPct / 100));
     const drainAlpha = 0.5 + Math.sin(frame * 0.2) * 0.3;
     ctx.globalAlpha = drainAlpha;
     ctx.font = `bold 9px ${FONT}`;
     ctx.fillStyle = '#FF4444';
-    ctx.textAlign = 'center';
-    ctx.fillText(`▼ ${decayRate}/s`, GAME_WIDTH / 2, 68);
+    ctx.fillText(`▼ ${Math.ceil(drain)}/s`, GAME_WIDTH / 2, by + 26);
     ctx.globalAlpha = 1;
   }
 
-  // Wave (top-left)
+  // ── Level tag (top-left, in the level's accent) ────────────────────────────
   ctx.font = `bold 11px ${FONT}`;
-  ctx.fillStyle = '#00FF41';
+  ctx.fillStyle = cfg.accent;
   ctx.textAlign = 'left';
-  ctx.shadowColor = '#00FF41'; ctx.shadowBlur = 6;
-  ctx.fillText(`WAVE ${wave}`, 10, 16);
+  ctx.shadowColor = cfg.accent; ctx.shadowBlur = 6;
+  ctx.fillText(st.mode === 'endless' ? '∞ SCROLL' : `AD ${cfg.n}/9`, 10, 16);
   ctx.shadowBlur = 0;
 
-  // Combo (top-right)
+  // ── Score (top-right) ──────────────────────────────────────────────────────
+  ctx.font = `bold 11px ${FONT}`;
+  ctx.fillStyle = '#FF2D95';
+  ctx.textAlign = 'right';
+  ctx.shadowColor = '#FF2D95'; ctx.shadowBlur = 5;
+  ctx.fillText(`SCORE ${st.score.toLocaleString()}`, GAME_WIDTH - 28, 16);
+  ctx.shadowBlur = 0;
+
+  // Combo (under score)
   if (combo >= 2) {
-    ctx.font = `bold 12px ${FONT}`;
+    ctx.font = `bold 11px ${FONT}`;
     ctx.fillStyle = '#FFD700';
     ctx.textAlign = 'right';
     ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 5;
-    ctx.fillText(`×${combo} COMBO`, GAME_WIDTH - 10, 16);
+    ctx.fillText(`×${combo} COMBO`, GAME_WIDTH - 10, 32);
     ctx.shadowBlur = 0;
   }
 
@@ -76,21 +100,26 @@ export function drawHUD(ctx, st) {
     ctx.globalAlpha = 1;
   }
 
-  // Wave message
+  // Wave/level message
   if (waveMsgTimer > 0) {
     ctx.globalAlpha = clamp(waveMsgTimer / 600, 0, 1);
     ctx.font = `bold 14px ${FONT}`;
-    ctx.fillStyle = '#00FF41';
+    ctx.fillStyle = cfg.accent;
     ctx.textAlign = 'center';
-    ctx.shadowColor = '#00FF41'; ctx.shadowBlur = 10;
+    ctx.shadowColor = cfg.accent; ctx.shadowBlur = 10;
     ctx.fillText(waveMsg, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100);
     ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
   }
 
+  // Fake ad chrome footer
+  ctx.font = `8px ${FONT}`;
+  ctx.fillStyle = '#2a2a2a';
+  ctx.textAlign = 'left';
+  ctx.fillText(`${cfg.sponsor ?? 'Sponsored'}`, 8, GAME_HEIGHT - 8);
+
   // FTC easter egg
-  if (dp > 1000) {
-    ctx.font = `8px ${FONT}`;
+  if (st.score > 5000) {
     ctx.fillStyle = '#1a1a1a';
     ctx.textAlign = 'right';
     ctx.fillText('THE FTC WOULD LIKE A WORD', GAME_WIDTH - 8, GAME_HEIGHT - 8);

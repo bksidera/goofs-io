@@ -85,7 +85,13 @@ export const initState = (mode = 'campaign') => {
   if (mode === 'campaign') {
     startLevel(st, 0);
   } else {
+    // Endless throws level-9-grade gates from second one; 100 starting power
+    // would be a coin-flip death. Start meatier.
     st.levelPhase = 'running';
+    st.player.power = 400;
+    st.player.targetPower = 400;
+    st.player.displayPower = 400;
+    st.player.peakPower = 400;
   }
   return st;
 };

@@ -12,7 +12,7 @@ import { drawGate }        from '../rendering/gates.js';
 import {
   drawTrail, drawParticles, drawFloats, drawFlash,
   drawInfectionClearFlash, drawScanlines, drawGlitch,
-  drawInfectionOverlay,
+  drawInfectionOverlay, drawLowPowerVignette,
 } from '../rendering/effects.js';
 import { drawHUD } from '../rendering/hud.js';
 import { drawLevelCard, drawBoss, drawLevelProgress } from '../rendering/overlays.js';
@@ -176,7 +176,7 @@ export default function GameScreen({ onDeath, mode = 'campaign' }) {
       ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
       ctx.translate(st.shakeX, st.shakeY);
 
-      drawBackground(ctx, st);
+      drawBackground(ctx, st, cfg.accent);
 
       const scramble = st._scrambleActive || false;
       for (const g of st.gates) {
@@ -185,7 +185,7 @@ export default function GameScreen({ onDeath, mode = 'campaign' }) {
       }
 
       if (st.infected) drawInfectionOverlay(ctx, st.frame);
-      drawTrail(ctx, st.trail);
+      drawTrail(ctx, st.trail, cfg.accent);
       // Invulnerability flicker after revive / boss hit
       const invulnBlink = st.invulnTimer > 0 && Math.floor(st.frame / 4) % 2 === 0;
       if (!invulnBlink) drawPlayer(ctx, laneX(st.player.lane), 540, st.frame);
@@ -196,11 +196,12 @@ export default function GameScreen({ onDeath, mode = 'campaign' }) {
 
       drawFlash(ctx, st.flashAlpha, st.flashColor);
       drawInfectionClearFlash(ctx, st.infectionFlash);
+      drawLowPowerVignette(ctx, st.player.displayPower, cfg.powerCap, st.frame);
       drawScanlines(ctx, st.scanOff, st.decayVisual);
       if (st.glitchOn) drawGlitch(ctx);
 
       ctx.restore();
-      drawHUD(ctx, st);
+      drawHUD(ctx, st, cfg);
       if (st.levelPhase === 'running') drawLevelProgress(ctx, st, cfg);
       if (st.levelPhase === 'intro' || st.levelPhase === 'clear') drawLevelCard(ctx, st, cfg);
 
@@ -291,12 +292,20 @@ export default function GameScreen({ onDeath, mode = 'campaign' }) {
     decoyButtonPressed(st, id, setPopups);
   }, []);
 
-  // ── Tab visibility pause ──────────────────────────────────────────────────
+  // ── Tab visibility pause (auto-resume when the tab returns) ──────────────
+  const autoPausedRef = useRef(false);
   useEffect(() => {
     const onVis = () => {
+      const st = stateRef.current;
+      if (!st || st.dead) return;
       if (document.hidden) {
-        const st = stateRef.current;
-        if (st && !st.paused && !st.dead) togglePause();
+        if (!st.paused) {
+          autoPausedRef.current = true;
+          togglePause();
+        }
+      } else if (st.paused && autoPausedRef.current) {
+        autoPausedRef.current = false;
+        togglePause();
       }
     };
     document.addEventListener('visibilitychange', onVis);
@@ -313,12 +322,27 @@ export default function GameScreen({ onDeath, mode = 'campaign' }) {
     };
   }, [startLoop, mode]);
 
-  // Dev hook for automated testing
+  // Dev hook for automated testing. step(ms) advances the sim manually —
+  // needed because rAF doesn't fire in hidden tabs during headless tests.
   useEffect(() => {
     if (!import.meta.env.DEV) return;
-    window.__adgame = { stateRef, startLoop };
+    const hooks = { spawnPopup, spawnStormPopup, setPopups };
+    window.__adgame = {
+      stateRef,
+      startLoop,
+      step: (ms) => {
+        const st = stateRef.current;
+        if (!st) return;
+        let remaining = ms;
+        while (remaining > 0 && !st.dead) {
+          tickLogic(st, Math.min(remaining, 16.67), hooks);
+          remaining -= 16.67;
+        }
+        if (st.dead) handleDeadState();
+      },
+    };
     return () => { delete window.__adgame; };
-  }, [startLoop]);
+  }, [startLoop, handleDeadState]);
 
   return (
     <div style={{

@@ -7,8 +7,15 @@ import { RAIN_COL_WIDTH, RAIN_GLYPH_SET } from '../game/state.js';
 
 const GLYPH_H = 14;
 
-export function drawBackground(ctx, st) {
+// hex '#RRGGBB' → 'r, g, b' for rgba() composition
+function hexToRgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
+}
+
+export function drawBackground(ctx, st, accent = COLORS.GREEN) {
   const { frame, rain, scrollSpeed, player, infected, decayVisual } = st;
+  const accentRgb = hexToRgb(accent);
 
   // ── Base gradient — black with the faintest green floor ────────────────────
   const bg = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
@@ -17,6 +24,13 @@ export function drawBackground(ctx, st) {
   bg.addColorStop(1, COLORS.BG_BOT);
   ctx.fillStyle = bg;
   ctx.fillRect(-10, -10, GAME_WIDTH + 20, GAME_HEIGHT + 20);
+
+  // ── Horizon glow — the level's accent bleeds up from the floor ─────────────
+  const horizon = ctx.createLinearGradient(0, GAME_HEIGHT - 140, 0, GAME_HEIGHT);
+  horizon.addColorStop(0, `rgba(${accentRgb}, 0)`);
+  horizon.addColorStop(1, `rgba(${accentRgb}, 0.10)`);
+  ctx.fillStyle = horizon;
+  ctx.fillRect(0, GAME_HEIGHT - 140, GAME_WIDTH, 140);
 
   // ── Matrix digital rain ────────────────────────────────────────────────────
   // High waves bleed red through the rain so danger reads at a glance.
@@ -66,8 +80,8 @@ export function drawBackground(ctx, st) {
   ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
   ctx.fillRect(LANE_OFFSET, 0, LANE_COUNT * LANE_WIDTH, GAME_HEIGHT);
 
-  // ── Lane dividers (thin neon stripes) ──────────────────────────────────────
-  const divColor = infected ? 'rgba(255, 0, 64, 0.35)' : 'rgba(0, 255, 65, 0.25)';
+  // ── Lane dividers (thin neon stripes, tinted by level accent) ──────────────
+  const divColor = infected ? 'rgba(255, 0, 64, 0.35)' : `rgba(${accentRgb}, 0.28)`;
   ctx.strokeStyle = divColor;
   ctx.lineWidth = 1;
   for (let i = 0; i <= LANE_COUNT; i++) {
@@ -80,7 +94,7 @@ export function drawBackground(ctx, st) {
 
   // ── Scrolling lane floor lines (sells motion in the lane bay) ──────────────
   const go = (frame * scrollSpeed * 0.45) % 60;
-  ctx.strokeStyle = infected ? 'rgba(255, 0, 64, 0.10)' : 'rgba(0, 255, 65, 0.08)';
+  ctx.strokeStyle = infected ? 'rgba(255, 0, 64, 0.10)' : `rgba(${accentRgb}, 0.09)`;
   for (let y = -60 + go; y < GAME_HEIGHT; y += 60) {
     ctx.beginPath();
     ctx.moveTo(LANE_OFFSET, y);
@@ -89,7 +103,7 @@ export function drawBackground(ctx, st) {
   }
 
   // ── Player lane highlight ──────────────────────────────────────────────────
-  const hi = infected ? 'rgba(255, 0, 64, 0.10)' : 'rgba(0, 255, 65, 0.08)';
+  const hi = infected ? 'rgba(255, 0, 64, 0.10)' : `rgba(${accentRgb}, 0.09)`;
   ctx.fillStyle = hi;
   ctx.fillRect(LANE_OFFSET + player.lane * LANE_WIDTH, 0, LANE_WIDTH, GAME_HEIGHT);
 
