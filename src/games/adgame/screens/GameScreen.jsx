@@ -167,8 +167,15 @@ export default function GameScreen({ onDeath, mode = 'campaign' }) {
       const dt = Math.min(time - st.lastTime, 50);
       st.lastTime = time;
 
+      const prevPhase = st.levelPhase;
       if (!st.dead) tickLogic(st, dt, hooks);
       if (st.dead) { handleDeadState(); return; }
+
+      // Phase-transition stings
+      if (st.levelPhase !== prevPhase) {
+        if (st.levelPhase === 'boss') audio.sfxBossAlarm();
+        else if (st.levelPhase === 'clear') audio.sfxLevelClear();
+      }
 
       const cfg = getLevelConfig(st);
 
@@ -216,6 +223,7 @@ export default function GameScreen({ onDeath, mode = 'campaign' }) {
     const st = stateRef.current;
     if (!st) return;
     reviveRun(st);
+    audio.sfxRevive();
     setReviveOffer(false);
     setPopups([]);
     st.pops = [];

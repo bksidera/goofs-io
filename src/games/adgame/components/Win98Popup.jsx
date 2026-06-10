@@ -30,14 +30,26 @@ function TitleBar({ title, onClose }) {
 }
 
 // ── Base Win98 window shell ───────────────────────────────────────────────────
+// Spawn-in animation: pops from 0.6 scale with a brief CRT flicker — popups
+// should ARRIVE, not just exist.
 function Win98Window({ x, y, width = 210, title, children, onClose, extra }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
   return (
     <div onClick={e => e.stopPropagation()} style={{
       position: 'absolute', left: x, top: y, width,
       background: '#C0C0C0', border: '2px outset #dfdfdf',
       boxShadow: '2px 2px 0 #000, inset 1px 1px 0 #fff',
       fontFamily: WIN98_FONT, fontSize: 11, zIndex: 100,
-      transition: 'left 0.1s ease-out, top 0.1s ease-out',
+      transform: mounted ? 'scale(1)' : 'scale(0.6)',
+      opacity: mounted ? 1 : 0.4,
+      filter: mounted ? 'none' : 'brightness(1.8)',
+      transition: 'left 0.1s ease-out, top 0.1s ease-out, transform 0.13s cubic-bezier(0.2, 1.6, 0.4, 1), opacity 0.13s, filter 0.2s',
+      transformOrigin: 'center center',
       userSelect: 'none', imageRendering: 'auto',
     }}>
       <TitleBar title={title} onClose={onClose} />

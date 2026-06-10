@@ -467,6 +467,63 @@ class AudioEngine {
     });
   }
 
+  // Boss klaxon: two-tone alarm, repeated three times.
+  sfxBossAlarm() {
+    if (!this.ctx || this.muted) return;
+    const t = this.ctx.currentTime;
+    for (let rep = 0; rep < 3; rep++) {
+      [[440, 0], [330, 0.14]].forEach(([f, offset]) => {
+        const osc = this.ctx.createOscillator();
+        const g   = this.ctx.createGain();
+        osc.type  = 'sawtooth';
+        osc.frequency.value = f;
+        const start = t + rep * 0.3 + offset;
+        g.gain.setValueAtTime(0.16, start);
+        g.gain.exponentialRampToValueAtTime(0.001, start + 0.13);
+        osc.connect(g);
+        g.connect(this.sfxGain);
+        osc.start(start);
+        osc.stop(start + 0.14);
+      });
+    }
+  }
+
+  // Level clear: triumphant ascending major run with a sparkle on top.
+  sfxLevelClear() {
+    if (!this.ctx || this.muted) return;
+    const t = this.ctx.currentTime;
+    [N.C5, N.E5, N.G5, N.C6, N.E6].forEach((f, i) => {
+      const osc = this.ctx.createOscillator();
+      const g   = this.ctx.createGain();
+      osc.type  = i === 4 ? 'triangle' : 'square';
+      osc.frequency.value = f;
+      g.gain.setValueAtTime(0.18, t + i * 0.09);
+      g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.09 + 0.22);
+      osc.connect(g);
+      g.connect(this.sfxGain);
+      osc.start(t + i * 0.09);
+      osc.stop(t + i * 0.09 + 0.24);
+    });
+  }
+
+  // Revive: rising power-up sweep — the rewarded ad delivered.
+  sfxRevive() {
+    if (!this.ctx || this.muted) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const g   = this.ctx.createGain();
+    osc.type  = 'square';
+    osc.frequency.setValueAtTime(180, t);
+    osc.frequency.exponentialRampToValueAtTime(1400, t + 0.45);
+    g.gain.setValueAtTime(0.001, t);
+    g.gain.exponentialRampToValueAtTime(0.2, t + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    osc.connect(g);
+    g.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.52);
+  }
+
   sfxDeath() {
     if (!this.ctx || this.muted) return;
     const t = this.ctx.currentTime;
