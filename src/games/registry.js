@@ -13,6 +13,7 @@
 
 import AdGame from './adgame/AdGame.jsx';
 import Clicker from './clicker/Clicker.jsx';
+import Chomp from './chomp/Chomp.jsx';
 
 export const games = [
   {
@@ -34,5 +35,15 @@ export const games = [
     badge: 'ALPHA',
     color: '#F2C75C',
     component: Clicker,
+  },
+  {
+    slug: 'chomp',
+    title: 'CHOMP',
+    description:
+      'A very good boy vs. four ghosts. Eat every steak in the maze. The big steaks bite back. You know this game — but now it has a dog.',
+    tags: ['arcade', 'maze', 'steak'],
+    badge: 'PLAYABLE',
+    color: '#D99A4E',
+    component: Chomp,
   },
 ];

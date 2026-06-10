@@ -1,0 +1,19 @@
+/* Scoped under .chomp-root so nothing leaks into the hub. */
+
+.chomp-root {
+  min-height: 100vh;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.chomp-root .chomp-canvas {
+  image-rendering: pixelated;
+  max-width: 100%;
+  max-height: 96vh;
+  height: auto;
+  touch-action: none;
+}
