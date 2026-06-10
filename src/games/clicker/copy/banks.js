@@ -60,6 +60,32 @@ export const STAGE_LOADING_LINES = {
   stage8: 'BREAKING ENCRYPTION (PLEASE WAIT)',
 };
 
+// Airdrop catch toasts (golden-cookie-style random event).
+export const AIRDROP_LINES = [
+  'AIRDROP CLAIMED. DEFINITELY NOT A HONEYPOT.',
+  'FREE MONEY. NO STRINGS. PROBABLY.',
+  'YOU WERE EARLY FOR ONCE.',
+  'GAS FEES WAIVED. MIRACLE CONFIRMED.',
+  'AN ANONYMOUS WHALE SMILES UPON YOU.',
+  'IT FELL OFF A TRUCK. A BLOCKCHAIN TRUCK.',
+];
+
+// Missed-airdrop lines (it drifted away unclicked).
+export const AIRDROP_MISSED_LINES = [
+  'AIRDROP MISSED. NGMI.',
+  'IT WENT TO SOMEONE WHO "BELIEVED HARDER."',
+  'YOU HESITATED. THE WHALE DID NOT.',
+];
+
+// Stage-8 entry — the mania before the end.
+export const OVERDRIVE_LINE = '💎 DIAMOND OVERDRIVE — ×10 EVERYTHING. NOTHING CAN GO WRONG.';
+
+// The aftermath. Shown one line at a time over the painterly scene.
+export const AFTERMATH_LINES = [
+  'After all the clamor for fame and fortune and the frantic pursuit of invented value, we find peace in accepting the imperfect beauty of what endures.',
+  'The true value was never in the accumulation, but in the experience of having lived through it all.',
+];
+
 export function randomFrom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }

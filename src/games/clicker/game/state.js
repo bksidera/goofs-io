@@ -27,5 +27,11 @@ export function initState() {
     // Active steam buff from a boil. Shape: { multiplier, expiresAt } or null.
     // While active, manual clicks are worth `multiplier`× their base value.
     steamBuff: null,
+    // Run statistics — surfaced in the aftermath epitaph.
+    stats: {
+      totalClicks: 0,
+      peakCurrency: 0,
+      startedAt: Date.now(),
+    },
   };
 }

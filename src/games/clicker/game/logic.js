@@ -83,6 +83,11 @@ export function calculateCPS(state) {
     total *= state.steamBuff.multiplier;
   }
 
+  // Stage 8: diamond overdrive. Numbers go vertical. Nothing can go wrong.
+  if (getStageOrder(state.narrativeStage) === 8) {
+    total *= DIAMOND_OVERDRIVE_MULTIPLIER;
+  }
+
   return total;
 }
 
@@ -125,6 +130,12 @@ export const TEMP_MAX = 100;
 export const STEAM_BUFF_MULTIPLIER = 3;
 export const STEAM_BUFF_DURATION_MS = 8000;
 
+// Stage-8 "diamond overdrive" — the mania before the rug pull. All income is
+// silently multiplied so numbers go vertical right before the apocalypse.
+export const DIAMOND_OVERDRIVE_MULTIPLIER = 10;
+// How long the player gets to enjoy stage 8 before the quantum apocalypse.
+export const APOCALYPSE_DELAY_MS = 35000;
+
 export function isSteamBuffActive(state, now = Date.now()) {
   return state.steamBuff != null && now < state.steamBuff.expiresAt;
 }
@@ -153,6 +164,9 @@ export function applyManualClick(state) {
   state.totalEarned += earned;
   // Temperature climbs with each click (capped at TEMP_MAX).
   state.temperature = Math.min(TEMP_MAX, (state.temperature ?? 0) + TEMP_PER_CLICK);
+  if (state.stats) {
+    state.stats = { ...state.stats, totalClicks: state.stats.totalClicks + 1 };
+  }
   return earned;
 }
 
@@ -167,7 +181,33 @@ export function applyTick(state, tickSeconds, cps) {
   if (state.steamBuff && Date.now() >= state.steamBuff.expiresAt) {
     state.steamBuff = null;
   }
+  if (state.stats && state.currency > state.stats.peakCurrency) {
+    state.stats = { ...state.stats, peakCurrency: state.currency };
+  }
   return earned;
+}
+
+// Largest number of `gen` units affordable with current currency (capped to
+// keep the geometric-series loop bounded). Used by the MAX buy option.
+export function maxAffordable(gen, owned, currency, cap = 500) {
+  let n = 0;
+  while (n < cap && calculateBulkCost(gen, owned, n + 1) <= currency) n++;
+  return n;
+}
+
+// Reward for catching an airdrop: 30 seconds of current CPS, floored so it
+// always feels worthwhile even with zero generators.
+export function airdropReward(state) {
+  return Math.max(50, Math.floor(calculateCPS(state) * 30));
+}
+
+// Credits an airdrop catch. Returns the amount awarded.
+export function applyAirdropCatch(state) {
+  if (isCrashed(state)) return 0;
+  const reward = airdropReward(state);
+  state.currency += reward;
+  state.totalEarned += reward;
+  return reward;
 }
 
 // If temperature has reached TEMP_MAX, reset to 0 and activate the steam buff
@@ -183,15 +223,23 @@ export function checkTemperatureBoil(state) {
   return true;
 }
 
+// Resolves the buy amount for a generator — handles the 'max' setting.
+export function resolveBuyAmount(state, gen, owned) {
+  if (state.buyAmount === 'max') return maxAffordable(gen, owned, state.currency);
+  return state.buyAmount;
+}
+
 export function buyGenerator(state, generatorId) {
   if (isCrashed(state)) return false;
   const gen = gameData.generators.find(g => g.id === generatorId);
   if (!gen) return false;
   const owned = state.generators[generatorId] || 0;
-  const cost = calculateBulkCost(gen, owned, state.buyAmount);
+  const amount = resolveBuyAmount(state, gen, owned);
+  if (amount < 1) return false;
+  const cost = calculateBulkCost(gen, owned, amount);
   if (state.currency < cost) return false;
   state.currency -= cost;
-  state.generators[generatorId] = owned + state.buyAmount;
+  state.generators[generatorId] = owned + amount;
   return true;
 }
 

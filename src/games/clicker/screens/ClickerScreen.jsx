@@ -7,6 +7,7 @@ import {
   applyManualClick,
   applyTick,
   applyRebootClick,
+  applyAirdropCatch,
   completeReboot,
   buyGenerator,
   buyUpgrade,
@@ -18,6 +19,7 @@ import {
   isRebooting,
   isSteamBuffActive,
   steamBuffRemainingMs,
+  APOCALYPSE_DELAY_MS,
   REINITIALIZING_MS,
   STEAM_BUFF_MULTIPLIER,
   STEAM_BUFF_DURATION_MS,
@@ -28,6 +30,9 @@ import {
   MILESTONES,
   UPGRADE_PURCHASES,
   GENERATOR_PURCHASES,
+  AIRDROP_LINES,
+  AIRDROP_MISSED_LINES,
+  OVERDRIVE_LINE,
   randomFrom,
 } from '../copy/banks.js';
 
@@ -41,6 +46,9 @@ import Toast from '../components/Toast.jsx';
 import SystemCrashOverlay from '../components/SystemCrashOverlay.jsx';
 import TemperatureGauge from '../components/TemperatureGauge.jsx';
 import WizardAura from '../components/WizardAura.jsx';
+import AirdropEvent from '../components/AirdropEvent.jsx';
+import ApocalypseSequence from '../components/ApocalypseSequence.jsx';
+import AftermathScreen from './AftermathScreen.jsx';
 
 import '../Clicker.css';
 
@@ -56,21 +64,37 @@ function cloneState(s) {
     cards: [...s.cards],
     selectedCards: [...s.selectedCards],
     legacy: { ...s.legacy },
+    stats: { ...s.stats },
   };
 }
 
 const GENERATOR_FLAVOR_CHANCE = 0.3;
 
+// Airdrop event timing (golden-cookie pattern): random gap, short window.
+const AIRDROP_MIN_GAP_MS = 40000;
+const AIRDROP_MAX_GAP_MS = 80000;
+const AIRDROP_LIFETIME_MS = 7500;
+
 export default function ClickerScreen() {
   const [state, setState] = useState(initState);
   const [flashGeneratorId, setFlashGeneratorId] = useState(null);
   const [boiling, setBoiling] = useState(false);
+  // 'playing' → 'apocalypse' (cutscene) → 'aftermath' (ending screen)
+  const [gamePhase, setGamePhase] = useState('playing');
+  const [airdrop, setAirdrop] = useState(null);
+  // Fortune snapshot taken the instant the apocalypse fires — the drain
+  // animation counts down from this.
+  const [apocalypseFortune, setApocalypseFortune] = useState(0);
 
   const rootRef = useRef(null);
   const fxRef = useRef(null);
   const toastRef = useRef(null);
   const lastMilestoneRef = useRef(-1);
   const boilTimeoutRef = useRef(null);
+  // Live currency mirror so the apocalypse timeout can snapshot the fortune
+  // at fire time without a stale closure.
+  const currencyRef = useRef(0);
+  const airdropIdRef = useRef(1);
 
   const tickSeconds = gameData.meta.engine.tick_seconds_recommended ?? FALLBACK_TICK_SECONDS;
 
@@ -93,8 +117,9 @@ export default function ClickerScreen() {
     }, 600);
   }, []);
 
-  // ── Tick loop ─────────────────────────────────────────────────────────────
+  // ── Tick loop (paused during apocalypse/aftermath) ────────────────────────
   useEffect(() => {
+    if (gamePhase !== 'playing') return;
     const id = setInterval(() => {
       setState(prev => {
         const next = cloneState(prev);
@@ -105,7 +130,83 @@ export default function ClickerScreen() {
       });
     }, tickSeconds * 1000);
     return () => clearInterval(id);
-  }, [tickSeconds]);
+  }, [tickSeconds, gamePhase]);
+
+  // Keep the currency mirror fresh for the apocalypse snapshot.
+  useEffect(() => {
+    currencyRef.current = state.currency;
+  }, [state.currency]);
+
+  // ── Apocalypse trigger ────────────────────────────────────────────────────
+  // Entering stage 8 starts the doom clock. The player gets APOCALYPSE_DELAY_MS
+  // of ×10 overdrive mania, then the rug pull. They don't know it's coming.
+  const inStage8 = getStageOrder(state.narrativeStage) === 8;
+  useEffect(() => {
+    if (!inStage8 || gamePhase !== 'playing') return;
+    toastRef.current?.push({ text: OVERDRIVE_LINE, kind: 'milestone' });
+    const id = setTimeout(() => {
+      setApocalypseFortune(Math.floor(currencyRef.current));
+      setAirdrop(null);
+      setGamePhase('apocalypse');
+    }, APOCALYPSE_DELAY_MS);
+    return () => clearTimeout(id);
+  }, [inStage8, gamePhase]);
+
+  // ── Airdrop scheduler (golden-cookie random event) ────────────────────────
+  // Random gaps; only during normal play from stage 2 onward; drop expires
+  // unclicked after AIRDROP_LIFETIME_MS with a taunt.
+  const airdropsEligible = gamePhase === 'playing' && getStageOrder(state.narrativeStage) >= 2 && !isCrashed(state);
+  useEffect(() => {
+    if (!airdropsEligible) return;
+    let expireId = null;
+    const gap = AIRDROP_MIN_GAP_MS + Math.random() * (AIRDROP_MAX_GAP_MS - AIRDROP_MIN_GAP_MS);
+    const spawnId = setTimeout(() => {
+      const id = airdropIdRef.current++;
+      setAirdrop({ id, x: 8 + Math.random() * 80 });
+      expireId = setTimeout(() => {
+        setAirdrop(prev => {
+          if (prev?.id === id) {
+            toastRef.current?.push({ text: randomFrom(AIRDROP_MISSED_LINES), kind: 'flavor' });
+            return null;
+          }
+          return prev;
+        });
+      }, AIRDROP_LIFETIME_MS);
+    }, gap);
+    return () => {
+      clearTimeout(spawnId);
+      if (expireId) clearTimeout(expireId);
+    };
+    // Re-arms after each drop resolves (airdrop → null changes the dep below).
+  }, [airdropsEligible, airdrop]);
+
+  const handleAirdropCatch = useCallback(() => {
+    setAirdrop(null);
+    setState(prev => {
+      const next = cloneState(prev);
+      const reward = applyAirdropCatch(next);
+      if (reward > 0) {
+        toastRef.current?.push({
+          text: `🪂 +${formatNumber(reward)} — ${randomFrom(AIRDROP_LINES)}`,
+          kind: 'milestone',
+        });
+      }
+      return next;
+    });
+    triggerShake();
+  }, [triggerShake]);
+
+  // ── Play again (prestige-lite) ────────────────────────────────────────────
+  const handlePlayAgain = useCallback(() => {
+    lastMilestoneRef.current = -1;
+    setAirdrop(null);
+    setState(prev => {
+      const fresh = initState();
+      fresh.legacy = { ...prev.legacy, completions: prev.legacy.completions + 1 };
+      return fresh;
+    });
+    setGamePhase('playing');
+  }, []);
 
   // ── Milestone detection (derives from totalEarned) ────────────────────────
   useEffect(() => {
@@ -245,14 +346,30 @@ export default function ClickerScreen() {
   const steamRemainingMs = steamBuffRemainingMs(state);
   const steamRemainingSec = steamActive ? Math.ceil(steamRemainingMs / 1000) : 0;
 
+  // ── Ending branches ───────────────────────────────────────────────────────
+  if (gamePhase === 'aftermath') {
+    return (
+      <AftermathScreen
+        stats={state.stats}
+        currencyName={currencyName}
+        runNumber={state.legacy.completions + 1}
+        onPlayAgain={handlePlayAgain}
+      />
+    );
+  }
+
   return (
-    <div className="clicker-root" ref={rootRef}>
+    <div className={`clicker-root stage-bg-${stageOrder}`} ref={rootRef}>
       <div className="clicker-container">
         <div className="clicker-main">
           <h1 className="clicker-currency">
             {formatNumber(Math.floor(displayedCurrency))} {currencyName}
           </h1>
           <p className="clicker-cps">{formatNumber(cps)} / sec</p>
+          <p className="clicker-stats-line">
+            lifetime {formatNumber(Math.floor(state.totalEarned))} · {state.stats.totalClicks.toLocaleString()} clicks
+            {state.legacy.completions > 0 && ` · run ${state.legacy.completions + 1}`}
+          </p>
 
           <div className="clicker-core-wrap">
             {showWizardAura && <WizardAura />}
@@ -289,6 +406,14 @@ export default function ClickerScreen() {
       <FxLayer ref={fxRef} />
       <Toast ref={toastRef} />
       <SystemCrashOverlay crashMode={state.crashMode} onRebootClick={handleRebootClick} />
+      <AirdropEvent drop={airdrop} onCatch={handleAirdropCatch} />
+      {gamePhase === 'apocalypse' && (
+        <ApocalypseSequence
+          finalCurrency={apocalypseFortune}
+          currencyName={currencyName}
+          onComplete={() => setGamePhase('aftermath')}
+        />
+      )}
     </div>
   );
 }
