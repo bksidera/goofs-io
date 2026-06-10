@@ -11,7 +11,8 @@ import DeathScreen   from './screens/DeathScreen.jsx';
 export default function AdGameExe() {
   const [screen,      setScreen]      = useState('loading');
   const [loadingStep, setLoadingStep] = useState(0);
-  const [deathData,   setDeathData]   = useState({ score: 0, wave: 1, peak: 100 });
+  const [mode,        setMode]        = useState('campaign');
+  const [deathData,   setDeathData]   = useState({ score: 0, level: 1, peak: 100, victory: false, mode: 'campaign' });
 
   // Loading sequence
   useEffect(() => {
@@ -29,9 +30,14 @@ export default function AdGameExe() {
     return () => clearInterval(t);
   }, [screen]);
 
-  const handleDeath = useCallback((score, wave, peak) => {
-    setDeathData({ score, wave, peak });
+  const handleDeath = useCallback((summary) => {
+    setDeathData(summary);
     setScreen('death');
+  }, []);
+
+  const handleStart = useCallback((startMode = 'campaign') => {
+    setMode(startMode);
+    setScreen('game');
   }, []);
 
   const handleRetry = useCallback(() => {
@@ -45,13 +51,13 @@ export default function AdGameExe() {
         <Centered><LoadingScreen step={loadingStep} /></Centered>
       )}
       {screen === 'title' && (
-        <Centered><TitleScreen onStart={() => setScreen('game')} /></Centered>
+        <Centered><TitleScreen onStart={handleStart} /></Centered>
       )}
       {screen === 'death' && (
-        <Centered><DeathScreen data={deathData} onRetry={handleRetry} /></Centered>
+        <Centered><DeathScreen data={deathData} onRetry={handleRetry} onMenu={() => setScreen('title')} /></Centered>
       )}
       {screen === 'game' && (
-        <GameScreen onDeath={handleDeath} />
+        <GameScreen onDeath={handleDeath} mode={mode} />
       )}
     </div>
   );

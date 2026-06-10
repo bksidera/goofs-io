@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { FONT, GAME_WIDTH, GAME_HEIGHT, COLORS } from '../game/constants.js';
 import { drawPlayer } from '../rendering/player.js';
+import { isCampaignCleared } from '../game/scoring.js';
 
 // Mini Matrix rain just for the title screen — same idea as in-game, smaller cast.
 const TITLE_RAIN_GLYPHS = '0123456789ABCDEFアカサタナハマヤラワ';
@@ -28,6 +29,7 @@ export default function TitleScreen({ onStart }) {
   const frameRef  = useRef(0);
   const rainRef   = useRef(null);
   const [btnHover, setBtnHover] = useState(false);
+  const [endlessUnlocked] = useState(() => isCampaignCleared());
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -119,7 +121,7 @@ export default function TitleScreen({ onStart }) {
         </div>
 
         <button
-          onClick={onStart}
+          onClick={() => onStart('campaign')}
           onMouseEnter={() => setBtnHover(true)}
           onMouseLeave={() => setBtnHover(false)}
           style={{
@@ -142,8 +144,22 @@ export default function TitleScreen({ onStart }) {
 
         <div style={{ fontSize: 9, color: '#444', fontFamily: FONT }}>(you already did)</div>
 
+        {endlessUnlocked && (
+          <button
+            onClick={() => onStart('endless')}
+            style={{
+              marginTop: 10, padding: '9px 24px', fontSize: 11, fontWeight: 900,
+              fontFamily: FONT, background: 'transparent', color: COLORS.PINK,
+              border: `1px solid ${COLORS.PINK}`, cursor: 'pointer', letterSpacing: 2,
+              boxShadow: `0 0 10px ${COLORS.PINK}40`,
+            }}
+          >
+            ∞ INFINITE SCROLL
+          </button>
+        )}
+
         <div style={{ position: 'absolute', bottom: 14, fontSize: 9, color: '#333', fontFamily: FONT }}>
-          Level 1 of 9,473 · No IAP · No Ads
+          9 ads · No IAP · One rewarded video (you'll see)
         </div>
       </div>
     </div>

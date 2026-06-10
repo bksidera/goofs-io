@@ -134,6 +134,15 @@ export const TUTORIAL_LINES = [
   "This is real gameplay. Not a redirect.",
 ];
 
+export const VICTORY_LINES = [
+  "You watched all 9 ads. The algorithm weeps with pride.",
+  "Campaign complete. Your attention span has been monetized successfully.",
+  "You beat the ad. The ad industry would like a word.",
+  "All ads watched. Your reward: more ads (INFINITE SCROLL unlocked).",
+  "Conversion complete. You ARE the product now.",
+  "9 of 9 ads. Marketing has never been so proud of anyone.",
+];
+
 export const SYSTEM_RESTORED = [
   "SYSTEM RESTORED",
   "THREAT NEUTRALIZED",

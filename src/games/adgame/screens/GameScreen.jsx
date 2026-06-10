@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-import { GAME_WIDTH, GAME_HEIGHT, laneX, FONT } from '../game/constants.js';
+import { GAME_WIDTH, GAME_HEIGHT, laneX, FONT, getLevelConfig } from '../game/constants.js';
 import { initState }   from '../game/state.js';
-import { tickLogic }   from '../game/logic.js';
-import { spawnPopup, closePopup, decoyButtonPressed } from '../game/popups.js';
+import { tickLogic, reviveRun } from '../game/logic.js';
+import { finalizeRun } from '../game/scoring.js';
+import { spawnPopup, spawnStormPopup, closePopup, decoyButtonPressed } from '../game/popups.js';
 
 import { drawBackground }  from '../rendering/background.js';
 import { drawPlayer }      from '../rendering/player.js';
@@ -14,8 +15,10 @@ import {
   drawInfectionOverlay,
 } from '../rendering/effects.js';
 import { drawHUD } from '../rendering/hud.js';
+import { drawLevelCard, drawBoss, drawLevelProgress } from '../rendering/overlays.js';
 
 import Win98Popup from '../components/Win98Popup.jsx';
+import ReviveAd from './ReviveAd.jsx';
 import { audio }  from '../sound/audio.js';
 
 // ── Responsive scale ──────────────────────────────────────────────────────────
@@ -31,7 +34,7 @@ function useGameScale() {
 }
 
 // ── Pause overlay ─────────────────────────────────────────────────────────────
-function PauseOverlay({ wave, power, onResume, onQuit, muted, onToggleMute }) {
+function PauseOverlay({ levelLabel, power, score, onResume, onQuit, muted, onToggleMute }) {
   return (
     <div style={{
       position: 'absolute', inset: 0, zIndex: 300,
@@ -39,10 +42,10 @@ function PauseOverlay({ wave, power, onResume, onQuit, muted, onToggleMute }) {
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       gap: 16,
     }}>
-      <div style={{ fontSize: 11, color: '#00FF41', fontFamily: FONT, letterSpacing: 4, opacity: 0.7 }}>SYSTEM HALTED</div>
+      <div style={{ fontSize: 11, color: '#00FF41', fontFamily: FONT, letterSpacing: 4, opacity: 0.7 }}>AD PAUSED (A FIRST)</div>
       <div style={{ fontSize: 36, fontWeight: 900, color: '#fff', fontFamily: FONT, textShadow: '0 0 20px #00FF41' }}>PAUSED</div>
       <div style={{ display: 'flex', gap: 22, fontSize: 11, fontFamily: FONT, marginBottom: 8 }}>
-        {[['WAVE', wave, '#00FF41'], ['POWER', Math.floor(power), '#FFD700']].map(([l, v, c]) => (
+        {[['LEVEL', levelLabel, '#00FF41'], ['POWER', Math.floor(power), '#FFD700'], ['SCORE', score, '#FF2D95']].map(([l, v, c]) => (
           <div key={l} style={{ textAlign: 'center' }}>
             <div style={{ color: '#555', fontSize: 9 }}>{l}</div>
             <div style={{ color: c, fontSize: 22, fontWeight: 900 }}>{typeof v === 'number' ? v.toLocaleString() : v}</div>
@@ -57,7 +60,7 @@ function PauseOverlay({ wave, power, onResume, onQuit, muted, onToggleMute }) {
 }
 
 // ── Main GameScreen ───────────────────────────────────────────────────────────
-export default function GameScreen({ onDeath }) {
+export default function GameScreen({ onDeath, mode = 'campaign' }) {
   const canvasRef  = useRef(null);
   const stateRef   = useRef(null);
   const animRef    = useRef(null);
@@ -65,12 +68,12 @@ export default function GameScreen({ onDeath }) {
   const audioReady = useRef(false);
   const scale      = useGameScale();
 
-  const [popups,    setPopups]    = useState([]);
-  const [paused,    setPaused]    = useState(false);
-  const [muted,     setMuted]     = useState(false);
-  const [pauseSnap, setPauseSnap] = useState({ wave: 1, power: 100 });
+  const [popups,     setPopups]     = useState([]);
+  const [paused,     setPaused]     = useState(false);
+  const [muted,      setMuted]      = useState(false);
+  const [pauseSnap,  setPauseSnap]  = useState({ levelLabel: '1', power: 100, score: 0 });
+  const [reviveOffer, setReviveOffer] = useState(false);
 
-  // Keep muted in a ref so togglePause closure always has the latest value
   const mutedRef = useRef(false);
   useEffect(() => { mutedRef.current = muted; }, [muted]);
 
@@ -83,10 +86,33 @@ export default function GameScreen({ onDeath }) {
     audio.sfxGameStart();
   }, []);
 
+  // ── Death / victory routing ───────────────────────────────────────────────
+  const finishRun = useCallback(() => {
+    const st = stateRef.current;
+    if (!st) return;
+    audio.stopMusic();
+    if (!st.victory) audio.sfxDeath();
+    onDeath(finalizeRun(st));
+  }, [onDeath]);
+
+  const handleDeadState = useCallback(() => {
+    const st = stateRef.current;
+    if (!st) return;
+    if (st.victory) {
+      finishRun();
+      return;
+    }
+    if (!st.usedRevive && st.mode === 'campaign') {
+      setReviveOffer(true); // loop stays parked; modal decides
+    } else {
+      finishRun();
+    }
+  }, [finishRun]);
+
   // ── Input ─────────────────────────────────────────────────────────────────
   const movePlayer = useCallback((dir) => {
     const st = stateRef.current;
-    if (!st || st.gameOver || st.paused) return;
+    if (!st || st.dead || st.paused) return;
     const next = st.player.lane + dir;
     if (next < 0 || next > 2) return;
     st.player.lane = next;
@@ -96,7 +122,7 @@ export default function GameScreen({ onDeath }) {
   const handleClick = useCallback((e) => {
     initAudio();
     const st = stateRef.current;
-    if (!st || st.gameOver || st.paused) return;
+    if (!st || st.dead || st.paused) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x    = (e.clientX - rect.left) / scale;
     const t    = GAME_WIDTH / 3;
@@ -126,21 +152,25 @@ export default function GameScreen({ onDeath }) {
     touchRef.current = null;
   }, [movePlayer, scale]);
 
-  // ── Game loop (defined before togglePause which calls it) ─────────────────
+  // ── Game loop ─────────────────────────────────────────────────────────────
   const startLoop = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
 
+    const hooks = { spawnPopup, spawnStormPopup, setPopups };
+
     const loop = (time) => {
       const st = stateRef.current;
-      if (!st || st.gameOver || st.paused) return;
+      if (!st || st.paused) return;
       const dt = Math.min(time - st.lastTime, 50);
       st.lastTime = time;
 
-      tickLogic(st, dt, spawnPopup, onDeath, setPopups);
-      if (st.gameOver) { audio.stopMusic(); audio.sfxDeath(); return; }
+      if (!st.dead) tickLogic(st, dt, hooks);
+      if (st.dead) { handleDeadState(); return; }
+
+      const cfg = getLevelConfig(st);
 
       ctx.save();
       ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
@@ -151,14 +181,19 @@ export default function GameScreen({ onDeath }) {
       const scramble = st._scrambleActive || false;
       for (const g of st.gates) {
         if (!g.alive) continue;
-        drawGate(ctx, laneX(g.lane), g.y, g.display, g.type, g.revealed, st.frame, st.infected, scramble, g.variant);
+        drawGate(ctx, laneX(g.lane), g.y, g.display, g.type, g.revealed, st.frame, st.infected, scramble, g.variant, g.tellPhase);
       }
 
       if (st.infected) drawInfectionOverlay(ctx, st.frame);
       drawTrail(ctx, st.trail);
-      drawPlayer(ctx, laneX(st.player.lane), 540, st.frame);
+      // Invulnerability flicker after revive / boss hit
+      const invulnBlink = st.invulnTimer > 0 && Math.floor(st.frame / 4) % 2 === 0;
+      if (!invulnBlink) drawPlayer(ctx, laneX(st.player.lane), 540, st.frame);
       drawParticles(ctx, st.particles);
       drawFloats(ctx, st.floats);
+
+      if (st.levelPhase === 'boss') drawBoss(ctx, st, st.frame, cfg.accent);
+
       drawFlash(ctx, st.flashAlpha, st.flashColor);
       drawInfectionClearFlash(ctx, st.infectionFlash);
       drawScanlines(ctx, st.scanOff, st.decayVisual);
@@ -166,21 +201,45 @@ export default function GameScreen({ onDeath }) {
 
       ctx.restore();
       drawHUD(ctx, st);
+      if (st.levelPhase === 'running') drawLevelProgress(ctx, st, cfg);
+      if (st.levelPhase === 'intro' || st.levelPhase === 'clear') drawLevelCard(ctx, st, cfg);
 
       animRef.current = requestAnimationFrame(loop);
     };
 
     animRef.current = requestAnimationFrame(loop);
-  }, [onDeath]);
+  }, [handleDeadState]);
 
-  // ── Pause (defined after startLoop) ──────────────────────────────────────
+  // ── Revive flow ───────────────────────────────────────────────────────────
+  const handleReviveAccept = useCallback(() => {
+    const st = stateRef.current;
+    if (!st) return;
+    reviveRun(st);
+    setReviveOffer(false);
+    setPopups([]);
+    st.pops = [];
+    st.lastTime = performance.now();
+    startLoop();
+  }, [startLoop]);
+
+  const handleReviveDecline = useCallback(() => {
+    setReviveOffer(false);
+    finishRun();
+  }, [finishRun]);
+
+  // ── Pause ─────────────────────────────────────────────────────────────────
   const togglePause = useCallback(() => {
     const st = stateRef.current;
-    if (!st || st.gameOver) return;
+    if (!st || st.dead) return;
     const nowPaused = !st.paused;
     st.paused = nowPaused;
     if (nowPaused) {
-      setPauseSnap({ wave: st.wave, power: st.player.targetPower });
+      const cfg = getLevelConfig(st);
+      setPauseSnap({
+        levelLabel: st.mode === 'endless' ? '∞' : `${cfg.n}/9`,
+        power: st.player.targetPower,
+        score: st.score,
+      });
       setPaused(true);
       audio.setMuted(true);
       if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null; }
@@ -194,11 +253,11 @@ export default function GameScreen({ onDeath }) {
 
   const handleQuit = useCallback(() => {
     const st = stateRef.current;
-    if (st) st.gameOver = true;
+    if (st) st.dead = true;
     if (animRef.current) cancelAnimationFrame(animRef.current);
     audio.stopMusic();
     setPaused(false);
-    onDeath(0, 1, 0);
+    onDeath(finalizeRun(stateRef.current));
   }, [onDeath]);
 
   const handleToggleMute = useCallback(() => {
@@ -207,7 +266,7 @@ export default function GameScreen({ onDeath }) {
     audio.setMuted(next);
   }, []);
 
-  // ── Keyboard (defined after togglePause) ──────────────────────────────────
+  // ── Keyboard ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') { togglePause(); return; }
@@ -237,7 +296,7 @@ export default function GameScreen({ onDeath }) {
     const onVis = () => {
       if (document.hidden) {
         const st = stateRef.current;
-        if (st && !st.paused && !st.gameOver) togglePause();
+        if (st && !st.paused && !st.dead) togglePause();
       }
     };
     document.addEventListener('visibilitychange', onVis);
@@ -246,12 +305,19 @@ export default function GameScreen({ onDeath }) {
 
   // ── Mount ─────────────────────────────────────────────────────────────────
   useEffect(() => {
-    stateRef.current = initState();
+    stateRef.current = initState(mode);
     startLoop();
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current);
       audio.stopMusic();
     };
+  }, [startLoop, mode]);
+
+  // Dev hook for automated testing
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    window.__adgame = { stateRef, startLoop };
+    return () => { delete window.__adgame; };
   }, [startLoop]);
 
   return (
@@ -303,13 +369,18 @@ export default function GameScreen({ onDeath }) {
 
         {paused && (
           <PauseOverlay
-            wave={pauseSnap.wave}
+            levelLabel={pauseSnap.levelLabel}
             power={pauseSnap.power}
+            score={pauseSnap.score}
             onResume={togglePause}
             onQuit={handleQuit}
             muted={muted}
             onToggleMute={handleToggleMute}
           />
+        )}
+
+        {reviveOffer && (
+          <ReviveAd onAccept={handleReviveAccept} onDecline={handleReviveDecline} />
         )}
       </div>
     </div>

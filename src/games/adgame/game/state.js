@@ -1,4 +1,5 @@
 import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
+import { startLevel } from './levels.js';
 
 // Matrix rain — vertical columns of green glyphs that scroll downward.
 // Each column owns its own glyph buffer so characters appear to mutate over time.
@@ -24,45 +25,67 @@ function makeRain() {
 export const RAIN_COL_WIDTH = RAIN_COL_W;
 export const RAIN_GLYPH_SET = RAIN_GLYPHS;
 
-export const initState = () => ({
-  player: { lane: 1, power: 100, peakPower: 100, targetPower: 100, displayPower: 100 },
+// mode: 'campaign' (9 levels + bosses) or 'endless' (INFINITE SCROLL).
+export const initState = (mode = 'campaign') => {
+  const st = {
+    mode,
+    player: { lane: 1, power: 100, peakPower: 100, targetPower: 100, displayPower: 100 },
 
-  gates: [],
-  particles: [],
-  floats: [],
-  pops: [],
-  trail: [],
-  rain: makeRain(),
+    gates: [],
+    particles: [],
+    floats: [],
+    pops: [],
+    trail: [],
+    rain: makeRain(),
 
-  wave: 1,
-  waveGates: 0,
-  gatesPerWave: 8,
-  scrollSpeed: 2.2,
-  spawnTimer: 0,
-  spawnInterval: 1100,
+    // Level flow
+    levelIndex: 0,
+    levelPhase: 'intro',
+    phaseTimer: 0,
+    gatesSpawned: 0,
+    boss: null,
+    elapsed: 0,
 
-  frame: 0,
-  lastTime: performance.now(),
-  gameOver: false,
-  paused: false,
+    // Run economy
+    score: 0,
+    lastLevelScore: 0,
+    victory: false,
+    dead: false,
+    usedRevive: false,
+    invulnTimer: 0,
+    hitStop: 0,
 
-  shakeX: 0, shakeY: 0, shakeTimer: 0,
-  flashAlpha: 0, flashColor: '#fff',
+    scrollSpeed: 2.3,
+    spawnTimer: 0,
 
-  combo: 0, comboTimer: 0,
+    frame: 0,
+    lastTime: performance.now(),
+    paused: false,
 
-  tutIdx: 0, tutTimer: 0, showTut: true,
-  waveMsg: '', waveMsgTimer: 0,
-  popCooldown: 0,
+    shakeX: 0, shakeY: 0, shakeTimer: 0,
+    flashAlpha: 0, flashColor: '#fff',
 
-  scanOff: 0,
-  glitchTimer: 0, glitchOn: false,
+    combo: 0, comboTimer: 0,
 
-  infected: false,
-  infectionFlash: 0,
-  infectionTextTimer: 0,
-  scrambleSeed: 0,
+    tutIdx: 0, tutTimer: 0, showTut: mode === 'campaign',
+    waveMsg: '', waveMsgTimer: 0,
+    popCooldown: 0,
 
-  decayRate: 0,
-  decayVisual: 0,
-});
+    scanOff: 0,
+    glitchTimer: 0, glitchOn: false,
+
+    infected: false,
+    infectionFlash: 0,
+    infectionTextTimer: 0,
+    scrambleSeed: 0,
+
+    decayVisual: 0,
+  };
+
+  if (mode === 'campaign') {
+    startLevel(st, 0);
+  } else {
+    st.levelPhase = 'running';
+  }
+  return st;
+};
