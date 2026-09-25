@@ -7,9 +7,9 @@ export default function CoreObject({ stage, onClick, buffed }) {
     buffed ? 'steam-buffed' : '',
   ].filter(Boolean).join(' ');
   return (
-    <div className={classes} onClick={onClick}>
-      <div className="clicker-core-object">{emoji}</div>
+    <button type="button" className={classes} onClick={onClick} aria-label="Mine">
+      <div className="clicker-core-object" aria-hidden="true">{emoji}</div>
       <p>Click to Mine</p>
-    </div>
+    </button>
   );
 }
