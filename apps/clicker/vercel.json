@@ -3,5 +3,8 @@
   "framework": "vite",
   "installCommand": "cd ../.. && npm install",
   "buildCommand": "cd ../.. && npm run build:clicker",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "redirects": [
+    { "source": "/", "destination": "/clicker/", "permanent": false }
+  ]
 }

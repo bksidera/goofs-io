@@ -1,8 +1,11 @@
-// The launcher's tile roster. Each entry becomes one card that links out to
-// its own subdomain (or localhost port in dev, via VITE_*_URL env vars).
+// The launcher's tile roster. Each entry becomes one card that links to
+// its game under goofs.io/<slug> (Vercel rewrites in vercel.json proxy to
+// the game's own project). In dev the tile points at the game's local
+// dev-server port via VITE_*_URL.
 //
-// Adding a game: (1) create apps/<slug>/, (2) add an entry here, (3) deploy
-// the app to <slug>.goofs.io, (4) set VITE_<SLUG>_URL in .env.production.
+// Adding a game: (1) create apps/<slug>/, (2) add an entry here, (3) add
+// a rewrite in apps/launcher/vercel.json, (4) set base '/<slug>/' in the
+// game's vite.config.js.
 
 const env = import.meta.env;
 
@@ -17,7 +20,7 @@ export const games = [
     badge: 'PLAYABLE',
     color: 'var(--goofs-magenta)',
     accentHex: '#FF2D95',
-    url: env.VITE_ADGAME_URL || 'https://adgame.goofs.io',
+    url: env.VITE_ADGAME_URL || '/adgame',
   },
   {
     slug: 'clicker',
@@ -29,6 +32,6 @@ export const games = [
     badge: 'ALPHA',
     color: 'var(--goofs-gold)',
     accentHex: '#F2C75C',
-    url: env.VITE_CLICKER_URL || 'https://clicker.goofs.io',
+    url: env.VITE_CLICKER_URL || '/clicker',
   },
 ];

@@ -3,5 +3,8 @@
   "framework": "vite",
   "installCommand": "cd ../.. && npm install",
   "buildCommand": "cd ../.. && npm run build:adgame",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "redirects": [
+    { "source": "/", "destination": "/adgame/", "permanent": false }
+  ]
 }

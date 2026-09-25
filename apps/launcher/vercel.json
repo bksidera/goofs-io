@@ -3,5 +3,13 @@
   "framework": "vite",
   "installCommand": "cd ../.. && npm install",
   "buildCommand": "cd ../.. && npm run build:launcher",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/adgame", "destination": "https://goofs-adgame.vercel.app/adgame/" },
+    { "source": "/adgame/", "destination": "https://goofs-adgame.vercel.app/adgame/" },
+    { "source": "/adgame/:path*", "destination": "https://goofs-adgame.vercel.app/adgame/:path*" },
+    { "source": "/clicker", "destination": "https://goofs-clicker.vercel.app/clicker/" },
+    { "source": "/clicker/", "destination": "https://goofs-clicker.vercel.app/clicker/" },
+    { "source": "/clicker/:path*", "destination": "https://goofs-clicker.vercel.app/clicker/:path*" }
+  ]
 }
