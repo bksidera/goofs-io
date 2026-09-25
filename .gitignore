@@ -29,3 +29,4 @@ dist-ssr
 
 # Claude session tooling (never commit)
 .claude/
+.vercel
