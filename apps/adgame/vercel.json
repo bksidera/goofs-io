@@ -6,5 +6,10 @@
   "outputDirectory": "dist",
   "redirects": [
     { "source": "/", "destination": "/adgame/", "permanent": false }
+  ],
+  "rewrites": [
+    { "source": "/adgame", "destination": "/index.html" },
+    { "source": "/adgame/", "destination": "/index.html" },
+    { "source": "/adgame/:path*", "destination": "/:path*" }
   ]
 }
