@@ -1,5 +1,8 @@
-import { STAGE_CRASH_LINES, STAGE_LOADING_LINES } from '../copy/banks.js';
-import { gameData } from '../game/state.js';
+// TODO: STAGE_CRASH_LINES / STAGE_LOADING_LINES are crypto-specific;
+// once the engine takes an `arc` prop, pass these via arc.copy and drop
+// this direct import.
+import { STAGE_CRASH_LINES, STAGE_LOADING_LINES } from '../../arcs/crypto/copy.js';
+import { gameData } from '../state.js';
 
 // Two-phase crash overlay:
 //   - 'rebooting'      → glitch header + REBOOT button + click progress bar

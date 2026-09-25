@@ -1,4 +1,4 @@
-import { TEMP_MAX } from '../game/logic.js';
+import { TEMP_MAX } from '../../../engine/logic.js';
 
 // Stage-1 only. A horizontal heat gauge that fills as the player clicks.
 // At 100, fires the boil bonus (handled by the parent screen).

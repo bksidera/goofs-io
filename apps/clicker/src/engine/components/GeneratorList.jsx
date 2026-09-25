@@ -1,6 +1,6 @@
-import { calculateBulkCost, resolveBuyAmount, visibleGenerators } from '../game/logic.js';
-import { formatNumber } from '../game/constants.js';
-import { gameData } from '../game/state.js';
+import { calculateBulkCost, resolveBuyAmount, visibleGenerators } from '../logic.js';
+import { formatNumber } from '../constants.js';
+import { gameData } from '../state.js';
 
 export default function GeneratorList({ state, onBuy, flashId }) {
   const generators = visibleGenerators(state);

@@ -1,4 +1,4 @@
-import { formatNumber } from '../game/constants.js';
+import { formatNumber } from '../constants.js';
 
 // A "+N" that drifts upward and fades over ~1s. Mounted briefly by FxLayer.
 export default function FloatingNumber({ x, y, value }) {

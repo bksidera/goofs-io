@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { formatNumber } from '../game/constants.js';
-import { AFTERMATH_LINES } from '../copy/banks.js';
+import { formatNumber } from '../../engine/constants.js';
+import { AFTERMATH_LINES } from './copy.js';
 
 // The ending. Not playable — a quiet scene the player sits with.
 // Painterly SVG placeholder (real art can swap in later): dawn light over

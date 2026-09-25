@@ -1,6 +1,6 @@
-import { visibleUpgrades, describeEffect } from '../game/logic.js';
-import { formatNumber } from '../game/constants.js';
-import { gameData } from '../game/state.js';
+import { visibleUpgrades, describeEffect } from '../logic.js';
+import { formatNumber } from '../constants.js';
+import { gameData } from '../state.js';
 
 export default function UpgradeList({ state, onBuy }) {
   const upgrades = visibleUpgrades(state);

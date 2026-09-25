@@ -1,4 +1,7 @@
-import gameData from '../data/gameData.json';
+// TODO: currently hard-imports the crypto arc's data blob. When we add a
+// second arc, promote `initState` to take a `data` argument (or move
+// data-owning helpers into the arc bundle).
+import gameData from '../arcs/crypto/data.json';
 
 export { gameData };
 

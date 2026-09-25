@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { formatNumber } from '../game/constants.js';
+import { formatNumber } from '../../../engine/constants.js';
 
 // The rug pull. A full-screen, non-interactive cutscene that plays once the
 // quantum apocalypse triggers. Phases advance on a fixed schedule; when the

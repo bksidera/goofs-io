@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 
-import { gameData, initState } from '../game/state.js';
+import { gameData, initState } from '../state.js';
 import {
   calculateCPS,
   calculateClickValue,
@@ -23,9 +23,16 @@ import {
   REINITIALIZING_MS,
   STEAM_BUFF_MULTIPLIER,
   STEAM_BUFF_DURATION_MS,
-} from '../game/logic.js';
-import { formatNumber, FALLBACK_TICK_SECONDS } from '../game/constants.js';
-import { useAnimatedNumber } from '../game/useAnimatedNumber.js';
+} from '../logic.js';
+import { formatNumber, FALLBACK_TICK_SECONDS } from '../constants.js';
+import { useAnimatedNumber } from '../useAnimatedNumber.js';
+import { createClickerSave } from '../save.js';
+import { createAudioRouter } from '../audio.js';
+
+// TODO: engine-in-transition. The imports below (copy bank + crypto-specific
+// mechanics + aftermath) currently reach into arcs/crypto/ directly. When
+// ArcScreen learns to consume its `arc` prop for these, delete these direct
+// imports and pull them from `arc.copy` / `arc.mechanics` / `arc.Aftermath`.
 import {
   MILESTONES,
   UPGRADE_PURCHASES,
@@ -34,7 +41,7 @@ import {
   AIRDROP_MISSED_LINES,
   OVERDRIVE_LINE,
   randomFrom,
-} from '../copy/banks.js';
+} from '../../arcs/crypto/copy.js';
 
 import CoreObject from '../components/CoreObject.jsx';
 import BuyAmountToggle from '../components/BuyAmountToggle.jsx';
@@ -44,13 +51,11 @@ import NarrativePanel from '../components/NarrativePanel.jsx';
 import FxLayer from '../components/FxLayer.jsx';
 import Toast from '../components/Toast.jsx';
 import SystemCrashOverlay from '../components/SystemCrashOverlay.jsx';
-import TemperatureGauge from '../components/TemperatureGauge.jsx';
-import WizardAura from '../components/WizardAura.jsx';
-import AirdropEvent from '../components/AirdropEvent.jsx';
-import ApocalypseSequence from '../components/ApocalypseSequence.jsx';
-import AftermathScreen from './AftermathScreen.jsx';
-
-import '../Clicker.css';
+import TemperatureGauge from '../../arcs/crypto/mechanics/TemperatureGauge.jsx';
+import WizardAura from '../../arcs/crypto/mechanics/WizardAura.jsx';
+import AirdropEvent from '../../arcs/crypto/mechanics/AirdropEvent.jsx';
+import ApocalypseSequence from '../../arcs/crypto/mechanics/ApocalypseSequence.jsx';
+import AftermathScreen from '../../arcs/crypto/aftermath.jsx';
 
 // AdGame.exe uses a mutable stateRef + canvas rAF for raw frame performance.
 // The clicker is DOM-rendered at 10Hz, so plain useState is the React-idiomatic
@@ -75,8 +80,31 @@ const AIRDROP_MIN_GAP_MS = 40000;
 const AIRDROP_MAX_GAP_MS = 80000;
 const AIRDROP_LIFETIME_MS = 7500;
 
-export default function ClickerScreen() {
-  const [state, setState] = useState(initState);
+export default function ArcScreen({ arc }) {
+  // `arc` scopes the save key and (eventually) supplies the content bundle.
+  // For now the direct imports above still supply data/copy/mechanics from
+  // arcs/crypto/. The prop is accepted here so callers already use the target API.
+  const arcId = arc?.id ?? 'crypto';
+
+  // Save + audio infra — instantiated once, then referenced via refs.
+  const saveRef = useRef(null);
+  const audioRef = useRef(null);
+  if (!saveRef.current) saveRef.current = createClickerSave(arcId, { initFactory: initState });
+  if (!audioRef.current) audioRef.current = createAudioRouter();
+
+  // Initial state: load a persisted run + apply offline accrual, or fresh.
+  const [state, setState] = useState(() => {
+    const { state: loaded, offlineSeconds } = saveRef.current.load();
+    if (offlineSeconds > 0 && loaded.currency !== undefined) {
+      const cps = calculateCPS(loaded);
+      return {
+        ...loaded,
+        currency: loaded.currency + cps * offlineSeconds,
+        _offlineSeconds: offlineSeconds,
+      };
+    }
+    return loaded;
+  });
   const [flashGeneratorId, setFlashGeneratorId] = useState(null);
   const [boiling, setBoiling] = useState(false);
   // 'playing' → 'apocalypse' (cutscene) → 'aftermath' (ending screen)
@@ -137,6 +165,53 @@ export default function ClickerScreen() {
     currencyRef.current = state.currency;
   }, [state.currency]);
 
+  // ── Persistence ───────────────────────────────────────────────────────────
+  // Save on every state change. @goofs/save throttles internally (500ms), so
+  // this fires cheaply — a tick-rate change still writes ~2×/sec worst case.
+  useEffect(() => {
+    if (!saveRef.current || !state) return;
+    // Strip the transient _offlineSeconds marker before writing so it doesn't
+    // ping-pong between saves.
+    const { _offlineSeconds, ...persistable } = state;
+    void _offlineSeconds;
+    saveRef.current.write(persistable);
+  }, [state]);
+
+  // Force-flush pending writes on unload so a tab-close doesn't lose the tick.
+  useEffect(() => {
+    const flush = () => saveRef.current?.flush();
+    window.addEventListener('beforeunload', flush);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.removeEventListener('beforeunload', flush);
+      window.removeEventListener('pagehide', flush);
+    };
+  }, []);
+
+  // Toast once for meaningful offline accrual, then clear the marker.
+  useEffect(() => {
+    const secs = state._offlineSeconds;
+    if (!secs || secs < 60) return;
+    const label = secs >= 3600
+      ? `${Math.floor(secs / 3600)}h ${Math.floor((secs % 3600) / 60)}m`
+      : `${Math.floor(secs / 60)}m`;
+    // Small delay so the toast fires after mount animation.
+    const t = setTimeout(() => {
+      toastRef.current?.push({
+        text: `you were gone ${label}. the machine kept mining.`,
+        kind: 'milestone',
+      });
+    }, 400);
+    setState(prev => {
+      const { _offlineSeconds, ...rest } = prev;
+      void _offlineSeconds;
+      return rest;
+    });
+    return () => clearTimeout(t);
+    // Intentionally runs only once, driven by initial state's flag.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Apocalypse trigger ────────────────────────────────────────────────────
   // Entering stage 8 starts the doom clock. The player gets APOCALYPSE_DELAY_MS
   // of ×10 overdrive mania, then the rug pull. They don't know it's coming.
@@ -144,9 +219,11 @@ export default function ClickerScreen() {
   useEffect(() => {
     if (!inStage8 || gamePhase !== 'playing') return;
     toastRef.current?.push({ text: OVERDRIVE_LINE, kind: 'milestone' });
+    audioRef.current?.play('apocalypse-warn');
     const id = setTimeout(() => {
       setApocalypseFortune(Math.floor(currencyRef.current));
       setAirdrop(null);
+      audioRef.current?.play('apocalypse-start');
       setGamePhase('apocalypse');
     }, APOCALYPSE_DELAY_MS);
     return () => clearTimeout(id);
@@ -190,6 +267,7 @@ export default function ClickerScreen() {
           text: `🪂 +${formatNumber(reward)} — ${randomFrom(AIRDROP_LINES)}`,
           kind: 'milestone',
         });
+        audioRef.current?.play('airdrop-catch', { reward });
       }
       return next;
     });
@@ -257,6 +335,10 @@ export default function ClickerScreen() {
         flashBoiling();
       }
 
+      // Audio dispatch — silent scaffold today, real SFX later.
+      audioRef.current?.play(isSteamBuffActive(next) ? 'click-crit' : 'click');
+      if (boiled) audioRef.current?.play('stage-transition', { source: 'boil' });
+
       return next;
     });
 
@@ -301,6 +383,8 @@ export default function ClickerScreen() {
             text: `SYSTEM RESTORED. ENTERING: ${advancedStage.theme.name.toUpperCase()}`,
             kind: 'milestone',
           });
+          audioRef.current?.play('crash-complete', { stage: advancedStage.id });
+          audioRef.current?.play('stage-transition', { to: advancedStage.id });
         }
         return next;
       });
@@ -318,6 +402,7 @@ export default function ClickerScreen() {
       if (Math.random() < GENERATOR_FLAVOR_CHANCE) {
         toastRef.current?.push({ text: randomFrom(GENERATOR_PURCHASES), kind: 'flavor' });
       }
+      audioRef.current?.play('buy-generator', { id });
       return next;
     });
   }, [clearGeneratorFlash]);
@@ -327,6 +412,7 @@ export default function ClickerScreen() {
       const next = cloneState(prev);
       if (!buyUpgrade(next, id)) return prev;
       toastRef.current?.push({ text: randomFrom(UPGRADE_PURCHASES), kind: 'flavor' });
+      audioRef.current?.play('buy-upgrade', { id });
       return next;
     });
   }, []);
