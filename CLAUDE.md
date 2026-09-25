@@ -1,66 +1,56 @@
-# AdGame.exe
+# goofs-hub — repo instructions
 
-Satirical 3-lane runner web game built with React + Canvas. The joke: it's the game from mobile ads that never actually existed — except now it does.
+npm workspaces monorepo. Two games (AdGame, Clicker) + a launcher + shared packages, each `apps/*` deploying to its own subdomain.
 
 ## Commands
-- `npm run dev` — Start dev server
-- `npm run build` — Production build
-- `npm run lint` — Lint
 
-## Architecture
+- `npm install` — root install (hoists workspace deps)
+- `npm run dev:launcher` — goofs.io launcher on :5173
+- `npm run dev:adgame` — AdGame.exe on :5174
+- `npm run dev:clicker` — Crypto Clicker on :5175
+- `npm run build:all` — build every workspace
+- `npm run lint` — lint apps + packages
+- Node **>= 20.19** required (Vite 8)
 
-React manages screen routing and popup overlays (DOM). Canvas handles all game rendering. The game loop lives in `GameScreen.jsx` using `requestAnimationFrame`.
-
-**Critical:** Game state is a mutable ref object (`stateRef.current`), NOT React state. React rerenders would kill frame rate. Only `setPopups` is called from the game loop (to update the popup React overlay).
-
-## File Structure
+## Layout
 
 ```
-src/
-├── AdGame.jsx              # Root: screen router + Centered wrapper
-├── screens/
-│   ├── LoadingScreen.jsx
-│   ├── TitleScreen.jsx
-│   ├── GameScreen.jsx      # Game loop, canvas, popup overlay, pause, keyboard, scaling
-│   └── DeathScreen.jsx
-├── game/
-│   ├── constants.js        # All dimensions, colors, wave table, gate probabilities
-│   ├── state.js            # initState() factory
-│   ├── logic.js            # tickLogic(): gates, collision, decay, wave, particles
-│   ├── popups.js           # spawnPopup(), closePopup(), popup tiers
-│   └── scoring.js          # calcScore(), getHighScore(), saveHighScore()
-├── rendering/
-│   ├── player.js           # drawPlayer()
-│   ├── enemies.js          # drawEnemy()
-│   ├── gates.js            # drawGate() — handles infection visual
-│   ├── effects.js          # Particles, floats, flash, glitch, scanlines, trail
-│   ├── background.js       # Stars, grid, lane highlights, decay degradation
-│   └── hud.js              # Power, wave, combo, decay indicator, tutorial text
-├── components/
-│   └── Win98Popup.jsx      # All 5 popup tiers: basic, dodger, decoy, splitter, boss
-├── copy/
-│   └── banks.js            # All text: death lines, wave lines, popup messages, etc.
-├── sound/
-│   └── audio.js            # ChiptuneEngine — SNES-style Web Audio synthesis + SFX
-└── utils/
-    └── helpers.js          # randomFrom, clamp, lerp
+apps/
+  launcher/           goofs.io — tile grid; tiles are <a> links to subdomains
+  adgame/             adgame.goofs.io — endless runner (React + Canvas)
+  clicker/            clicker.goofs.io — narrative idle (React + DOM)
+packages/
+  design-tokens/      color / type / motion tokens (JS + CSS custom props)
+  save/               createSave({ key, version, migrate }) — versioned localStorage
+  ui/                 EMPTY placeholder; add here only when 2 apps concretely share
 ```
 
-## Key Design Decisions
+## Architectural boundaries — do not cross
 
-- **Mutable game state** — `stateRef.current` is mutated directly in the rAF loop. Never put game loop data in React state.
-- **Popups are React DOM, not Canvas** — they need real click targets; canvas elements can't be tabbed/clicked reliably.
-- **Popup infection** — while any popup is alive, ALL gates deal enemy damage. This is the primary difficulty driver.
-- **Power decay** — applied every frame (`targetPower -= decayRate * dt/1000`), always to `targetPower`. Guarantees every run ends.
-- **targetPower vs displayPower** — `targetPower` is the real value; `displayPower` lerps toward it for smooth animation. Always modify `targetPower`.
-- **Audio lazy init** — Web Audio API requires a user gesture. `audio.init()` is called on first click/touch. Music starts then.
-- **Responsive scaling** — CSS `transform: scale()` on the 360×640 container. Canvas and popups scale uniformly.
+- **Games do not import from each other.** AdGame does not import from Clicker or vice versa.
+- **Games do not share game logic through `packages/ui`.** AdGame is Canvas + React; Clicker is DOM + React. Different problems.
+- **The launcher does not import game components.** Tiles link out to subdomains.
+- Both games consume `@goofs/design-tokens` and `@goofs/save`. Adding another shared package requires a real need in two apps.
 
-## Conventions
+## Deploy
 
-- Colors defined in `constants.js` — don't hardcode hex values elsewhere
-- All tuning values (speeds, intervals, probabilities, decay rates) live in `constants.js`
-- New gate types: add to `rollGateType()` in constants, add spawn logic in `logic.js`, add rendering in `gates.js`
-- New popup tiers: add to `pickTier()` in `popups.js`, add JSX in `Win98Popup.jsx`
-- New copy: add to appropriate array in `copy/banks.js`
-- New SFX: add method to `AudioEngine` class in `sound/audio.js`
+Each app is a separate Vercel (or equivalent) project rooted at `apps/<name>`. Root deploy at `goofs.io`, games at `<slug>.goofs.io`. Launcher's `.env.production` sets `VITE_ADGAME_URL` / `VITE_CLICKER_URL` to the subdomains; `.env.development` points at local ports.
+
+## Per-app conventions
+
+Each `apps/<name>/` has its own `CLAUDE.md` with details specific to that codebase:
+- [apps/launcher/CLAUDE.md](apps/launcher/CLAUDE.md)
+- [apps/adgame/CLAUDE.md](apps/adgame/CLAUDE.md)
+- [apps/clicker/CLAUDE.md](apps/clicker/CLAUDE.md)
+
+## Design vibe
+
+**Pro but punk.** Playdate/Panic craft + Devolver attitude. See design tokens in [packages/design-tokens/src/tokens.css](packages/design-tokens/src/tokens.css). Never use raw hex; always reference `var(--goofs-*)` (or `colors.*` from JS import).
+
+## Git
+
+Feature work happens on branches; **main is the deploy branch**. Preserve any WIP that gets scrapped on an `archive/*` branch before deleting — see `archive/pre-refactor-2026-09-25` for the pattern.
+
+## Plan
+
+Current multi-sprint plan lives at `.claude/plans/ok-what-i-want-structured-lecun.md`. Short version: cut to two games, monorepo, launcher polish, AdGame endless redirect, Clicker narrative + save + audio scaffolding — DONE. Next: commissioned art, commissioned music, difficulty tuning, apocalypse sequence polish, aftermath cinematography.

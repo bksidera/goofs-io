@@ -1,28 +1,34 @@
 {
   "name": "goofs-hub",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
+  "description": "goofs.io monorepo — launcher + games. Each app deploys to its own subdomain.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-router-dom": "^7.14.0"
+    "dev:launcher": "npm run dev --workspace=@goofs/launcher",
+    "dev:adgame": "npm run dev --workspace=@goofs/adgame",
+    "dev:clicker": "npm run dev --workspace=@goofs/clicker",
+    "build:launcher": "npm run build --workspace=@goofs/launcher",
+    "build:adgame": "npm run build --workspace=@goofs/adgame",
+    "build:clicker": "npm run build --workspace=@goofs/clicker",
+    "build:all": "npm run build --workspaces --if-present",
+    "lint": "eslint apps packages",
+    "preview:launcher": "npm run preview --workspace=@goofs/launcher",
+    "preview:adgame": "npm run preview --workspace=@goofs/adgame",
+    "preview:clicker": "npm run preview --workspace=@goofs/clicker"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.4.0",
-    "vite": "^8.0.4"
+    "globals": "^17.4.0"
+  },
+  "engines": {
+    "node": ">=20.19.0"
   }
 }

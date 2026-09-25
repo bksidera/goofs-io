@@ -1,0 +1,23 @@
+{
+  "name": "@goofs/launcher",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "goofs.io — the tile grid launcher. Deploys to the apex domain.",
+  "scripts": {
+    "dev": "vite --port 5173",
+    "build": "vite build",
+    "preview": "vite preview --port 5173"
+  },
+  "dependencies": {
+    "@goofs/design-tokens": "*",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^7.1.0"
+  }
+}

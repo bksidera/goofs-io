@@ -1,0 +1,42 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--goofs-void);
+  color: var(--goofs-fg);
+  font-family: var(--goofs-font-mono);
+  font-size: var(--goofs-text-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  min-height: 100svh;
+}
+
+/* selection stays on-brand */
+::selection {
+  background: var(--goofs-matrix);
+  color: var(--goofs-void);
+}
+
+/* scrollbar (webkit) — thin, cyberpunk */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--goofs-void); }
+::-webkit-scrollbar-thumb {
+  background: var(--goofs-fog);
+  border-radius: var(--goofs-radius-sm);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--goofs-hairline); }
+
+/* Focus ring — visible + on-brand, matches tab nav */
+:focus-visible {
+  outline: 2px solid var(--goofs-matrix);
+  outline-offset: 2px;
+}
