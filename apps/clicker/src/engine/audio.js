@@ -46,7 +46,6 @@ export function createAudioRouter({ enabled = true, debug = DEV } = {}) {
     if (!enabled) return;
     unlock();
     if (debug) {
-      // eslint-disable-next-line no-console
       console.debug(`[audio] ${event}`, opts);
     }
     // No actual playback yet — TODO: wire commissioned SFX per event.

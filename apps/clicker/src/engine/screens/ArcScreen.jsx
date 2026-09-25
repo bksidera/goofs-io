@@ -86,25 +86,20 @@ export default function ArcScreen({ arc }) {
   // arcs/crypto/. The prop is accepted here so callers already use the target API.
   const arcId = arc?.id ?? 'crypto';
 
-  // Save + audio infra — instantiated once, then referenced via refs.
-  const saveRef = useRef(null);
-  const audioRef = useRef(null);
-  if (!saveRef.current) saveRef.current = createClickerSave(arcId, { initFactory: initState });
-  if (!audioRef.current) audioRef.current = createAudioRouter();
-
-  // Initial state: load a persisted run + apply offline accrual, or fresh.
-  const [state, setState] = useState(() => {
-    const { state: loaded, offlineSeconds } = saveRef.current.load();
-    if (offlineSeconds > 0 && loaded.currency !== undefined) {
-      const cps = calculateCPS(loaded);
-      return {
-        ...loaded,
-        currency: loaded.currency + cps * offlineSeconds,
-        _offlineSeconds: offlineSeconds,
-      };
-    }
-    return loaded;
+  // Save + audio infra + initial state, all built once via lazy useState.
+  // Keeping this in one blob avoids "cannot access refs during render" (react-hooks/refs)
+  // and lets us derive the seeded state from the same load() call — no double read.
+  const [engine] = useState(() => {
+    const save = createClickerSave(arcId, { initFactory: initState });
+    const audio = createAudioRouter();
+    const { state: loaded, offlineSeconds } = save.load();
+    const seeded = offlineSeconds > 0 && loaded.currency !== undefined
+      ? { ...loaded, currency: loaded.currency + calculateCPS(loaded) * offlineSeconds }
+      : loaded;
+    return { save, audio, seeded, initialOfflineSeconds: offlineSeconds };
   });
+
+  const [state, setState] = useState(engine.seeded);
   const [flashGeneratorId, setFlashGeneratorId] = useState(null);
   const [boiling, setBoiling] = useState(false);
   // 'playing' → 'apocalypse' (cutscene) → 'aftermath' (ending screen)
@@ -169,48 +164,36 @@ export default function ArcScreen({ arc }) {
   // Save on every state change. @goofs/save throttles internally (500ms), so
   // this fires cheaply — a tick-rate change still writes ~2×/sec worst case.
   useEffect(() => {
-    if (!saveRef.current || !state) return;
-    // Strip the transient _offlineSeconds marker before writing so it doesn't
-    // ping-pong between saves.
-    const { _offlineSeconds, ...persistable } = state;
-    void _offlineSeconds;
-    saveRef.current.write(persistable);
-  }, [state]);
+    if (!state) return;
+    engine.save.write(state);
+  }, [state, engine]);
 
   // Force-flush pending writes on unload so a tab-close doesn't lose the tick.
   useEffect(() => {
-    const flush = () => saveRef.current?.flush();
+    const flush = () => engine.save.flush();
     window.addEventListener('beforeunload', flush);
     window.addEventListener('pagehide', flush);
     return () => {
       window.removeEventListener('beforeunload', flush);
       window.removeEventListener('pagehide', flush);
     };
-  }, []);
+  }, [engine]);
 
-  // Toast once for meaningful offline accrual, then clear the marker.
+  // Toast once for meaningful offline accrual — no setState, no cascade.
   useEffect(() => {
-    const secs = state._offlineSeconds;
+    const secs = engine.initialOfflineSeconds;
     if (!secs || secs < 60) return;
     const label = secs >= 3600
       ? `${Math.floor(secs / 3600)}h ${Math.floor((secs % 3600) / 60)}m`
       : `${Math.floor(secs / 60)}m`;
-    // Small delay so the toast fires after mount animation.
     const t = setTimeout(() => {
       toastRef.current?.push({
         text: `you were gone ${label}. the machine kept mining.`,
         kind: 'milestone',
       });
     }, 400);
-    setState(prev => {
-      const { _offlineSeconds, ...rest } = prev;
-      void _offlineSeconds;
-      return rest;
-    });
     return () => clearTimeout(t);
-    // Intentionally runs only once, driven by initial state's flag.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [engine]);
 
   // ── Apocalypse trigger ────────────────────────────────────────────────────
   // Entering stage 8 starts the doom clock. The player gets APOCALYPSE_DELAY_MS
@@ -219,15 +202,15 @@ export default function ArcScreen({ arc }) {
   useEffect(() => {
     if (!inStage8 || gamePhase !== 'playing') return;
     toastRef.current?.push({ text: OVERDRIVE_LINE, kind: 'milestone' });
-    audioRef.current?.play('apocalypse-warn');
+    engine.audio.play('apocalypse-warn');
     const id = setTimeout(() => {
       setApocalypseFortune(Math.floor(currencyRef.current));
       setAirdrop(null);
-      audioRef.current?.play('apocalypse-start');
+      engine.audio.play('apocalypse-start');
       setGamePhase('apocalypse');
     }, APOCALYPSE_DELAY_MS);
     return () => clearTimeout(id);
-  }, [inStage8, gamePhase]);
+  }, [inStage8, gamePhase, engine]);
 
   // ── Airdrop scheduler (golden-cookie random event) ────────────────────────
   // Random gaps; only during normal play from stage 2 onward; drop expires
@@ -267,12 +250,12 @@ export default function ArcScreen({ arc }) {
           text: `🪂 +${formatNumber(reward)} — ${randomFrom(AIRDROP_LINES)}`,
           kind: 'milestone',
         });
-        audioRef.current?.play('airdrop-catch', { reward });
+        engine.audio.play('airdrop-catch', { reward });
       }
       return next;
     });
     triggerShake();
-  }, [triggerShake]);
+  }, [triggerShake, engine]);
 
   // ── Play again (prestige-lite) ────────────────────────────────────────────
   const handlePlayAgain = useCallback(() => {
@@ -336,14 +319,14 @@ export default function ArcScreen({ arc }) {
       }
 
       // Audio dispatch — silent scaffold today, real SFX later.
-      audioRef.current?.play(isSteamBuffActive(next) ? 'click-crit' : 'click');
-      if (boiled) audioRef.current?.play('stage-transition', { source: 'boil' });
+      engine.audio.play(isSteamBuffActive(next) ? 'click-crit' : 'click');
+      if (boiled) engine.audio.play('stage-transition', { source: 'boil' });
 
       return next;
     });
 
     triggerShake();
-  }, [triggerShake, flashBoiling]);
+  }, [triggerShake, flashBoiling, engine]);
 
   // Cleanup the boil timeout on unmount
   useEffect(() => () => {
@@ -383,14 +366,14 @@ export default function ArcScreen({ arc }) {
             text: `SYSTEM RESTORED. ENTERING: ${advancedStage.theme.name.toUpperCase()}`,
             kind: 'milestone',
           });
-          audioRef.current?.play('crash-complete', { stage: advancedStage.id });
-          audioRef.current?.play('stage-transition', { to: advancedStage.id });
+          engine.audio.play('crash-complete', { stage: advancedStage.id });
+          engine.audio.play('stage-transition', { to: advancedStage.id });
         }
         return next;
       });
     }, REINITIALIZING_MS);
     return () => clearTimeout(timeoutId);
-  }, [state.crashMode?.phase]);
+  }, [state.crashMode?.phase, engine]);
 
   // ── Buy handlers ──────────────────────────────────────────────────────────
   const handleBuyGen = useCallback(id => {
@@ -402,20 +385,20 @@ export default function ArcScreen({ arc }) {
       if (Math.random() < GENERATOR_FLAVOR_CHANCE) {
         toastRef.current?.push({ text: randomFrom(GENERATOR_PURCHASES), kind: 'flavor' });
       }
-      audioRef.current?.play('buy-generator', { id });
+      engine.audio.play('buy-generator', { id });
       return next;
     });
-  }, [clearGeneratorFlash]);
+  }, [clearGeneratorFlash, engine]);
 
   const handleBuyUpgrade = useCallback(id => {
     setState(prev => {
       const next = cloneState(prev);
       if (!buyUpgrade(next, id)) return prev;
       toastRef.current?.push({ text: randomFrom(UPGRADE_PURCHASES), kind: 'flavor' });
-      audioRef.current?.play('buy-upgrade', { id });
+      engine.audio.play('buy-upgrade', { id });
       return next;
     });
-  }, []);
+  }, [engine]);
 
   const handleBuyAmount = useCallback(n => {
     setState(prev => ({ ...prev, buyAmount: n }));
