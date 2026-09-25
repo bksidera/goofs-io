@@ -14,6 +14,7 @@
 import AdGame from './adgame/AdGame.jsx';
 import Clicker from './clicker/Clicker.jsx';
 import Chomp from './chomp/Chomp.jsx';
+import Terms from './terms/Terms.jsx';
 
 export const games = [
   {
@@ -45,5 +46,15 @@ export const games = [
     badge: 'PLAYABLE',
     color: '#D99A4E',
     component: Chomp,
+  },
+  {
+    slug: 'terms',
+    title: 'Terms & Conditions',
+    description:
+      'Decline the agreement. Survive the interface. Read nothing, regret everything.',
+    tags: ['arcade', 'satire', 'legal'],
+    badge: 'ALPHA',
+    color: '#4DE1C1',
+    component: Terms,
   },
 ];
