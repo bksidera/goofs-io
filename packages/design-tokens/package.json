@@ -1,0 +1,14 @@
+{
+  "name": "@goofs/design-tokens",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Cyberpunk/cypherpunk design tokens shared across goofs.io + games.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./tokens.css": "./src/tokens.css",
+    "./fonts.css": "./src/fonts.css"
+  },
+  "files": ["src"]
+}

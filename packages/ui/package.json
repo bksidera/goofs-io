@@ -1,0 +1,12 @@
+{
+  "name": "@goofs/ui",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Placeholder for shared UI primitives. Empty until two apps concretely need the same one.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": ["src"]
+}

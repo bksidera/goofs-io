@@ -1,0 +1,103 @@
+/*
+ * goofs.io design tokens — CSS custom properties.
+ * Import once at the app root: @import '@goofs/design-tokens/tokens.css';
+ * Then reference: var(--goofs-magenta), var(--goofs-motion-base), etc.
+ */
+
+@import './fonts.css';
+
+:root {
+  /* -------- COLOR — cyberpunk core -------- */
+  --goofs-void:      #08080f;
+  --goofs-ink:       #0d0d1a;
+  --goofs-fog:       #1a1a2e;
+  --goofs-fg:        #ffffff;
+  --goofs-fg-dim:    #888899;
+  --goofs-fg-ghost:  #3a3a4d;
+  --goofs-hairline:  #222236;
+
+  /* -------- COLOR — signal accents -------- */
+  --goofs-matrix:    #00FF41; /* terminal green */
+  --goofs-magenta:   #FF2D95; /* AdGame */
+  --goofs-gold:      #F2C75C; /* Clicker */
+  --goofs-cyan:      #00E5FF; /* secondary accent */
+  --goofs-acid:      #B4FF00; /* highlight */
+  --goofs-glitch:    #FF3355; /* danger / death */
+  --goofs-amber:     #FFB000; /* caution */
+
+  /* -------- COLOR — semantic aliases -------- */
+  --goofs-bg:        var(--goofs-void);
+  --goofs-surface:   var(--goofs-ink);
+  --goofs-border:    var(--goofs-fog);
+  --goofs-text:      var(--goofs-fg);
+  --goofs-text-dim:  var(--goofs-fg-dim);
+  --goofs-success:   var(--goofs-matrix);
+  --goofs-danger:    var(--goofs-glitch);
+
+  /* -------- TYPOGRAPHY -------- */
+  --goofs-font-mono:    'JetBrains Mono', 'IBM Plex Mono', 'Berkeley Mono', 'Courier New', ui-monospace, monospace;
+  --goofs-font-display: 'Space Mono', 'JetBrains Mono', 'Courier New', monospace;
+
+  --goofs-text-xs:   0.6875rem;
+  --goofs-text-sm:   0.75rem;
+  --goofs-text-base: 0.875rem;
+  --goofs-text-md:   1rem;
+  --goofs-text-lg:   1.25rem;
+  --goofs-text-xl:   1.5rem;
+  --goofs-text-xxl:  2rem;
+  --goofs-text-hero: 3rem;
+
+  --goofs-weight-regular: 400;
+  --goofs-weight-medium:  500;
+  --goofs-weight-bold:    700;
+  --goofs-weight-black:   900;
+
+  --goofs-track-tight:  -0.02em;
+  --goofs-track-normal: 0;
+  --goofs-track-wide:   0.08em;
+  --goofs-track-ultra:  0.2em;
+
+  /* -------- SPACING (8px base) -------- */
+  --goofs-space-0:  0;
+  --goofs-space-1:  0.25rem;
+  --goofs-space-2:  0.5rem;
+  --goofs-space-3:  0.75rem;
+  --goofs-space-4:  1rem;
+  --goofs-space-5:  1.5rem;
+  --goofs-space-6:  2rem;
+  --goofs-space-7:  2.5rem;
+  --goofs-space-8:  3rem;
+  --goofs-space-9:  4rem;
+  --goofs-space-10: 6rem;
+
+  /* -------- MOTION -------- */
+  --goofs-motion-instant: 80ms;
+  --goofs-motion-fast:    120ms;
+  --goofs-motion-base:    220ms;
+  --goofs-motion-slow:    480ms;
+  --goofs-motion-epic:    900ms;
+
+  --goofs-ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --goofs-ease-in:     cubic-bezier(0.7, 0, 0.84, 0);
+  --goofs-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --goofs-ease-snap:   cubic-bezier(0.5, 0, 0.5, 1.5);
+
+  /* -------- RADIUS -------- */
+  --goofs-radius-none: 0;
+  --goofs-radius-sm:   2px;
+  --goofs-radius-md:   4px;
+  --goofs-radius-lg:   8px;
+  --goofs-radius-full: 9999px;
+
+  /* -------- ELEVATION -------- */
+  --goofs-depth: 0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* Reduced motion — clip long animations to instant. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --goofs-motion-base: 0ms;
+    --goofs-motion-slow: 0ms;
+    --goofs-motion-epic: 0ms;
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "@goofs/save",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Namespaced, versioned localStorage save utility for goofs.io games.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": ["src"]
+}

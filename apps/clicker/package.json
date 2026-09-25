@@ -1,0 +1,24 @@
+{
+  "name": "@goofs/clicker",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "description": "Crypto Clicker — narrative idle. Arc #1 of the Narrative Clicker Engine.",
+  "scripts": {
+    "dev": "vite --port 5175",
+    "build": "vite build",
+    "preview": "vite preview --port 5175"
+  },
+  "dependencies": {
+    "@goofs/design-tokens": "*",
+    "@goofs/save": "*",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "vite": "^8.0.4"
+  }
+}
