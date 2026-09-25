@@ -29,4 +29,7 @@ dist-ssr
 
 # Claude session tooling (never commit)
 .claude/
+
+# Vercel CLI local link state (per-machine; never commit)
 .vercel
+**/.vercel

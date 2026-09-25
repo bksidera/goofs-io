@@ -51,6 +51,7 @@ import NarrativePanel from '../components/NarrativePanel.jsx';
 import FxLayer from '../components/FxLayer.jsx';
 import Toast from '../components/Toast.jsx';
 import SystemCrashOverlay from '../components/SystemCrashOverlay.jsx';
+import StageProgressBar from '../components/StageProgressBar.jsx';
 import TemperatureGauge from '../../arcs/crypto/mechanics/TemperatureGauge.jsx';
 import WizardAura from '../../arcs/crypto/mechanics/WizardAura.jsx';
 import AirdropEvent from '../../arcs/crypto/mechanics/AirdropEvent.jsx';
@@ -428,26 +429,39 @@ export default function ArcScreen({ arc }) {
   }
 
   return (
-    <div className={`clicker-root stage-bg-${stageOrder}`} ref={rootRef}>
+    <div className={`clicker-root stage-${stageOrder} stage-bg-${stageOrder}`} ref={rootRef}>
       <div className="clicker-container">
         <div className="clicker-main">
-          <h1 className="clicker-currency">
-            {formatNumber(Math.floor(displayedCurrency))} {currencyName}
-          </h1>
-          <p className="clicker-cps">{formatNumber(cps)} / sec</p>
-          <p className="clicker-stats-line">
-            lifetime {formatNumber(Math.floor(state.totalEarned))} · {state.stats.totalClicks.toLocaleString()} clicks
-            {state.legacy.completions > 0 && ` · run ${state.legacy.completions + 1}`}
-          </p>
+
+          {/* Terminal header — sticky on mobile, always visible */}
+          <header className="clicker-header">
+            <div className="clicker-header-row">
+              <h1 className="clicker-currency">
+                {formatNumber(Math.floor(displayedCurrency))}
+                <span className="clicker-currency-unit">{currencyName}</span>
+              </h1>
+              <p className="clicker-cps">{formatNumber(cps)} / sec</p>
+            </div>
+            <p className="clicker-stats-line">
+              <span>lifetime {formatNumber(Math.floor(state.totalEarned))}</span>
+              <span>{state.stats.totalClicks.toLocaleString()} clicks</span>
+              {state.legacy.completions > 0 && <span>run {state.legacy.completions + 1}</span>}
+              {steamActive && (
+                <span className="clicker-steam-badge" aria-live="polite">
+                  ⚡ STEAM ×{STEAM_BUFF_MULTIPLIER} — {steamRemainingSec}s
+                </span>
+              )}
+            </p>
+            <StageProgressBar state={state} currentStageId={state.narrativeStage} />
+          </header>
 
           <div className="clicker-core-wrap">
+            <span className="clicker-core-badge">
+              <span className="clicker-core-badge-dot" />
+              {stage?.theme?.name?.toUpperCase()}
+            </span>
             {showWizardAura && <WizardAura />}
             <CoreObject stage={stage} onClick={handleClick} buffed={steamActive} />
-            {steamActive && (
-              <div className="clicker-steam-badge" aria-live="polite">
-                ⚡ STEAM ×{STEAM_BUFF_MULTIPLIER} — {steamRemainingSec}s
-              </div>
-            )}
           </div>
 
           {showTempGauge && (
@@ -458,18 +472,22 @@ export default function ArcScreen({ arc }) {
           <NarrativePanel stage={stage} flashKey={state.narrativeStage} />
         </div>
 
-        <div className="clicker-sidebar">
-          <h2 className="clicker-section-title">Generators</h2>
-          <BuyAmountToggle value={state.buyAmount} onChange={handleBuyAmount} />
-          <GeneratorList
-            state={state}
-            onBuy={handleBuyGen}
-            flashId={flashGeneratorId}
-          />
+        <aside className="clicker-sidebar">
+          <section>
+            <h2 className="clicker-section-title"><span className="clicker-section-title-inner">GENERATORS</span></h2>
+            <BuyAmountToggle value={state.buyAmount} onChange={handleBuyAmount} />
+            <GeneratorList
+              state={state}
+              onBuy={handleBuyGen}
+              flashId={flashGeneratorId}
+            />
+          </section>
 
-          <h2 className="clicker-section-title">Upgrades</h2>
-          <UpgradeList state={state} onBuy={handleBuyUpgrade} />
-        </div>
+          <section>
+            <h2 className="clicker-section-title"><span className="clicker-section-title-inner">UPGRADES</span></h2>
+            <UpgradeList state={state} onBuy={handleBuyUpgrade} />
+          </section>
+        </aside>
       </div>
 
       <FxLayer ref={fxRef} />

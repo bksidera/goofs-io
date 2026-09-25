@@ -20,17 +20,21 @@ export default function GeneratorList({ state, onBuy, flashId }) {
           canAfford ? '' : 'disabled',
           flashId === gen.id ? 'clicker-flash' : '',
         ].filter(Boolean).join(' ');
-        const buyLabel = isMax ? `Buy MAX (${amount})` : `Buy ${amount}`;
+        const buyLabel = isMax ? `BUY MAX (${amount})` : `BUY ${amount}`;
         return (
           <div
             key={gen.id}
             className={classes}
             onClick={() => onBuy(gen.id)}
           >
-            <h4>{gen.theme.name} ({owned})</h4>
+            <h4>
+              <span>{gen.theme.name}</span>
+              <span className="clicker-item-owned">{owned}</span>
+            </h4>
             <p>{gen.theme.description}</p>
             <p className="clicker-item-cost">
-              {buyLabel}: {formatNumber(cost)} {currencyName}
+              <span>{buyLabel}</span>
+              <span>{formatNumber(cost)} {currencyName}</span>
             </p>
           </div>
         );
