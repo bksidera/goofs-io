@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { FONT, GAME_WIDTH, GAME_HEIGHT, COLORS } from '../game/constants.js';
 import { drawPlayer } from '../rendering/player.js';
-import { isCampaignCleared } from '../game/scoring.js';
+import { loadStats } from '../game/scoring.js';
 
 // Mini Matrix rain just for the title screen — same idea as in-game, smaller cast.
 const TITLE_RAIN_GLYPHS = '0123456789ABCDEFアカサタナハマヤラワ';
@@ -24,12 +24,22 @@ function buildRain(w, h) {
   });
 }
 
+const fmt = (n) => (typeof n === 'number' ? n.toLocaleString() : n);
+const secs = (s) => {
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const rest = s % 60;
+  return `${m}m ${rest.toString().padStart(2, '0')}s`;
+};
+
 export default function TitleScreen({ onStart }) {
   const canvasRef = useRef(null);
   const frameRef  = useRef(0);
   const rainRef   = useRef(null);
   const [btnHover, setBtnHover] = useState(false);
-  const [endlessUnlocked] = useState(() => isCampaignCleared());
+  // Load stats once — never re-rolled while the title is open.
+  const [stats] = useState(() => loadStats());
+  const hasHistory = stats.runs > 0;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -40,10 +50,9 @@ export default function TitleScreen({ onStart }) {
     let raf;
     const draw = () => {
       frameRef.current++;
-      // bg
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-      // rain
+
       ctx.font = `bold 14px ${FONT}`;
       ctx.textBaseline = 'top';
       for (const c of rainRef.current) {
@@ -80,7 +89,6 @@ export default function TitleScreen({ onStart }) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
       ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-      // hackerman portrait floating in the middle
       drawPlayer(ctx, GAME_WIDTH / 2, 280, frameRef.current);
 
       raf = requestAnimationFrame(draw);
@@ -88,6 +96,18 @@ export default function TitleScreen({ onStart }) {
     draw();
     return () => cancelAnimationFrame(raf);
   }, []);
+
+  // Enter starts the run — matches the "install now" button, keyboard friendly.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onStart();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onStart]);
 
   return (
     <div style={S.wrap}>
@@ -98,70 +118,63 @@ export default function TitleScreen({ onStart }) {
       />
       <div style={S.scanlines} />
 
-      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', height: '100%', gap: 4, padding: '40px 30px 30px', textAlign: 'center', zIndex: 2 }}>
-        <div style={{ fontSize: 10, color: COLORS.GREEN, fontFamily: FONT, letterSpacing: 4, opacity: 0.7 }}>
-          ⚠ THIS IS AN AD ⚠
-        </div>
+      <div style={S.stack}>
+        <div style={S.warning}>⚠ THIS IS AN AD ⚠</div>
 
         {/* spacer where the canvas portrait sits */}
         <div style={{ height: 200 }} />
 
-        <div style={{ fontSize: 42, fontWeight: 900, color: '#fff', fontFamily: FONT, lineHeight: 1, letterSpacing: -1, textShadow: `0 0 18px ${COLORS.GREEN}, 0 0 38px ${COLORS.GREEN}, 3px 3px 0 #00AA22aa` }}>
+        <div style={S.title}>
           AdGame
-          <span style={{ color: COLORS.PINK, textShadow: `0 0 18px ${COLORS.PINK}, 0 0 36px ${COLORS.PINK}, 3px 3px 0 #FF2D9555` }}>
-            .exe
-          </span>
+          <span style={S.titlePink}>.exe</span>
         </div>
 
-        <div style={{ fontSize: 11, color: COLORS.GOLD, fontFamily: FONT, opacity: 0.85, fontStyle: 'italic', marginTop: 4 }}>
-          The game from the ad that doesn't exist.
-        </div>
-        <div style={{ fontSize: 10, color: COLORS.GREEN, fontFamily: FONT, opacity: 0.6 }}>
-          Except now it does.
-        </div>
+        <div style={S.subtitleGold}>The game from the ad that doesn&rsquo;t exist.</div>
+        <div style={S.subtitleGreen}>Except now it does.</div>
 
         <button
-          onClick={() => onStart('campaign')}
+          onClick={() => onStart()}
           onMouseEnter={() => setBtnHover(true)}
           onMouseLeave={() => setBtnHover(false)}
           style={{
-            marginTop: 28, padding: '13px 40px', fontSize: 17, fontWeight: 900,
-            fontFamily: FONT,
+            ...S.playBtn,
             background: btnHover ? `${COLORS.GREEN}22` : 'transparent',
-            color: COLORS.GREEN,
-            border: `2px solid ${COLORS.GREEN}`,
-            cursor: 'pointer',
-            letterSpacing: 3, textTransform: 'uppercase',
             boxShadow: btnHover
               ? `0 0 24px ${COLORS.GREEN}88, inset 0 0 20px ${COLORS.GREEN}30`
               : `0 0 12px ${COLORS.GREEN}55, inset 0 0 12px ${COLORS.GREEN}20`,
-            transition: 'all 0.15s ease',
-            textShadow: `0 0 10px ${COLORS.GREEN}`,
           }}
         >
           INSTALL NOW
         </button>
 
-        <div style={{ fontSize: 9, color: '#444', fontFamily: FONT }}>(you already did)</div>
+        <div style={S.playSub}>(you already did)</div>
 
-        {endlessUnlocked && (
-          <button
-            onClick={() => onStart('endless')}
-            style={{
-              marginTop: 10, padding: '9px 24px', fontSize: 11, fontWeight: 900,
-              fontFamily: FONT, background: 'transparent', color: COLORS.PINK,
-              border: `1px solid ${COLORS.PINK}`, cursor: 'pointer', letterSpacing: 2,
-              boxShadow: `0 0 10px ${COLORS.PINK}40`,
-            }}
-          >
-            ∞ INFINITE SCROLL
-          </button>
+        {hasHistory ? (
+          <div style={S.statsCard}>
+            <StatCol label="HIGH"    value={fmt(stats.highScore)}      color={COLORS.GOLD} />
+            <StatCol label="LONGEST" value={secs(stats.longestRunSecs)} color={COLORS.PINK} />
+            <StatCol label="RUNS"    value={fmt(stats.runs)}            color={COLORS.GREEN} />
+          </div>
+        ) : (
+          <div style={S.firstRunNote}>press ENTER to install nothing</div>
         )}
 
-        <div style={{ position: 'absolute', bottom: 14, fontSize: 9, color: '#333', fontFamily: FONT }}>
-          9 ads · No IAP · One rewarded video (you'll see)
+        <div style={S.footer}>
+          No IAP · No exit · No ads in the ad
         </div>
       </div>
+    </div>
+  );
+}
+
+function StatCol({ label, value, color }) {
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ color: '#555', fontSize: 9, letterSpacing: 2 }}>{label}</div>
+      <div style={{
+        color, fontSize: 15, fontWeight: 900, fontFamily: FONT,
+        textShadow: `0 0 8px ${color}55`, letterSpacing: 1,
+      }}>{value}</div>
     </div>
   );
 }
@@ -175,5 +188,53 @@ const S = {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, #00000018 2px, #00000018 3px)',
     pointerEvents: 'none', zIndex: 1,
+  },
+  stack: {
+    position: 'relative',
+    display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'flex-start',
+    height: '100%', gap: 4,
+    padding: '40px 30px 30px', textAlign: 'center', zIndex: 2,
+  },
+  warning: {
+    fontSize: 10, color: COLORS.GREEN, fontFamily: FONT,
+    letterSpacing: 4, opacity: 0.7,
+  },
+  title: {
+    fontSize: 42, fontWeight: 900, color: '#fff', fontFamily: FONT,
+    lineHeight: 1, letterSpacing: -1,
+    textShadow: `0 0 18px ${COLORS.GREEN}, 0 0 38px ${COLORS.GREEN}, 3px 3px 0 #00AA22aa`,
+  },
+  titlePink: {
+    color: COLORS.PINK,
+    textShadow: `0 0 18px ${COLORS.PINK}, 0 0 36px ${COLORS.PINK}, 3px 3px 0 #FF2D9555`,
+  },
+  subtitleGold: {
+    fontSize: 11, color: COLORS.GOLD, fontFamily: FONT,
+    opacity: 0.85, fontStyle: 'italic', marginTop: 4,
+  },
+  subtitleGreen: { fontSize: 10, color: COLORS.GREEN, fontFamily: FONT, opacity: 0.6 },
+  playBtn: {
+    marginTop: 28, padding: '13px 40px', fontSize: 17, fontWeight: 900,
+    fontFamily: FONT, color: COLORS.GREEN, border: `2px solid ${COLORS.GREEN}`,
+    cursor: 'pointer', letterSpacing: 3, textTransform: 'uppercase',
+    transition: 'all 0.15s ease',
+    textShadow: `0 0 10px ${COLORS.GREEN}`,
+  },
+  playSub: { fontSize: 9, color: '#444', fontFamily: FONT },
+  statsCard: {
+    marginTop: 20,
+    display: 'flex', gap: 26, alignItems: 'flex-end',
+    padding: '10px 18px',
+    border: `1px solid ${COLORS.GREEN}22`,
+    background: '#000000cc',
+  },
+  firstRunNote: {
+    marginTop: 20,
+    fontSize: 9, color: '#666', fontFamily: FONT, letterSpacing: 2,
+  },
+  footer: {
+    position: 'absolute', bottom: 14,
+    fontSize: 9, color: '#333', fontFamily: FONT,
   },
 };

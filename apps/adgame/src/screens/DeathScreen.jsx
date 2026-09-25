@@ -1,104 +1,120 @@
 import { useState } from 'react';
 import { FONT, COLORS } from '../game/constants.js';
-import { DEATH_LINES, VICTORY_LINES } from '../copy/banks.js';
+import { DEATH_LINES } from '../copy/banks.js';
 import { randomFrom } from '../utils/helpers.js';
-import { getHighScore } from '../game/scoring.js';
 
+/*
+ * Death screen — endless-only. There is no win path. Every run ends here.
+ * The screen shows the run's stats vs the all-time best and lets you retry
+ * or crawl back to the menu.
+ *
+ * `data` shape (from finalizeRun in game/scoring.js):
+ *   { score, secs, peak, runs,
+ *     isNewHigh, isNewLongest, isNewPeak,
+ *     best: { score, secs, peak } }
+ */
 export default function DeathScreen({ data, onRetry, onMenu }) {
-  const victory = data.victory;
-  // Stable line — picked once on mount, never re-rolled
-  const [line] = useState(() => randomFrom(victory ? VICTORY_LINES : DEATH_LINES));
-  const highScore = getHighScore();
-  const isNewBest = data.score >= highScore;
-
-  const headColor = victory ? COLORS.GOLD : COLORS.RED;
-  const levelLabel = data.mode === 'endless'
-    ? `${data.level}s` // endless reports survival seconds
-    : `${data.level}/9`;
+  // Stable line — picked once, never re-rolled.
+  const [line] = useState(() => randomFrom(DEATH_LINES));
+  const anyNew = data.isNewHigh || data.isNewLongest || data.isNewPeak;
 
   return (
     <div style={S.wrap}>
       <div style={S.scanlines} />
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 8, padding: 30, textAlign: 'center' }}>
+      <div style={S.stack}>
 
-        <div style={{ fontSize: 11, color: headColor, fontFamily: FONT, letterSpacing: 3 }}>
-          {victory ? '★ CAMPAIGN COMPLETE ★' : '⚠ FATAL ERROR ⚠'}
+        <div style={S.errBanner}>⚠ FATAL ERROR ⚠</div>
+
+        <div style={S.gameOver}>GAME OVER</div>
+
+        <div style={S.line}>{line}</div>
+
+        <div style={S.stats}>
+          <StatCell
+            label="SCORE"
+            value={fmt(data.score)}
+            best={fmt(data.best.score)}
+            color={COLORS.PINK}
+            newBest={data.isNewHigh}
+          />
+          <StatCell
+            label="TIME"
+            value={secs(data.secs)}
+            best={secs(data.best.secs)}
+            color={COLORS.GREEN}
+            newBest={data.isNewLongest}
+          />
+          <StatCell
+            label="PEAK"
+            value={fmt(data.peak)}
+            best={fmt(data.best.peak)}
+            color={COLORS.GOLD}
+            newBest={data.isNewPeak}
+          />
         </div>
 
-        <div style={{ fontSize: 30, fontWeight: 900, color: headColor, fontFamily: FONT, textShadow: `0 0 20px ${headColor}55, 3px 3px 0 ${headColor}33` }}>
-          {victory ? 'ALL ADS WATCHED' : 'GAME OVER'}
-        </div>
-
-        <div style={{ fontSize: 12, color: COLORS.PINK, fontFamily: FONT, maxWidth: 270, lineHeight: 1.5 }}>
-          {line}
-        </div>
-
-        {victory && (
-          <div style={{ fontSize: 10, color: COLORS.GREEN, fontFamily: FONT, letterSpacing: 1 }}>
-            INFINITE SCROLL MODE UNLOCKED
-          </div>
-        )}
-
-        <div style={{ marginTop: 14, display: 'flex', gap: 22, fontSize: 11, fontFamily: FONT }}>
-          {[
-            [data.mode === 'endless' ? 'SURVIVED' : 'AD', levelLabel, COLORS.GREEN],
-            ['PEAK',  data.peak,  COLORS.GOLD],
-            ['SCORE', data.score, COLORS.PINK],
-          ].map(([label, val, color]) => (
-            <div key={label} style={{ textAlign: 'center' }}>
-              <div style={{ color: '#555', fontSize: 9 }}>{label}</div>
-              <div style={{ color, fontSize: 20, fontWeight: 900, textShadow: `0 0 8px ${color}55` }}>
-                {typeof val === 'number' ? val.toLocaleString() : val}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {isNewBest && (
-          <div style={{ fontSize: 11, color: COLORS.GOLD, fontFamily: FONT, letterSpacing: 2, textShadow: `0 0 10px ${COLORS.GOLD}66` }}>
-            ★ NEW BEST ★
-          </div>
-        )}
-
-        {!isNewBest && (
-          <div style={{ fontSize: 9, color: '#333', fontFamily: FONT }}>
-            BEST: {highScore.toLocaleString()}
+        {anyNew && (
+          <div style={S.newBestPulse}>
+            ★ NEW BEST{newBestLabel(data)} ★
           </div>
         )}
 
         <button
           onClick={onRetry}
-          style={{
-            marginTop: 20, padding: '13px 40px', fontSize: 17, fontWeight: 900,
-            fontFamily: FONT, background: 'transparent', color: COLORS.GREEN,
-            border: `2px solid ${COLORS.GREEN}`, cursor: 'pointer', letterSpacing: 3,
-            textTransform: 'uppercase',
-            boxShadow: `0 0 12px ${COLORS.GREEN}55, inset 0 0 12px ${COLORS.GREEN}20`,
-            textShadow: `0 0 8px ${COLORS.GREEN}`,
-          }}
+          style={S.retryBtn}
+          autoFocus
         >
-          {victory ? 'RUN IT BACK' : 'RETRY (FREE)'}
+          RUN IT BACK
         </button>
 
         {onMenu && (
-          <button
-            onClick={onMenu}
-            style={{
-              padding: '8px 20px', fontSize: 10, fontFamily: FONT,
-              background: 'transparent', color: '#666',
-              border: '1px solid #333', cursor: 'pointer', letterSpacing: 2,
-            }}
-          >
+          <button onClick={onMenu} style={S.menuBtn}>
             MAIN MENU
           </button>
         )}
 
-        <div style={{ fontSize: 9, color: '#333', fontFamily: FONT }}>
-          No in-app purchases were harmed in the making of this score
+        <div style={S.footer}>
+          run {data.runs.toLocaleString()} · no revives · no refunds · no ads
         </div>
       </div>
     </div>
   );
+}
+
+function StatCell({ label, value, best, color, newBest }) {
+  return (
+    <div style={{ textAlign: 'center', minWidth: 68 }}>
+      <div style={{ color: '#555', fontSize: 9, letterSpacing: 2 }}>{label}</div>
+      <div style={{
+        color, fontSize: 20, fontWeight: 900, fontFamily: FONT,
+        textShadow: `0 0 10px ${color}66`,
+      }}>{value}</div>
+      <div style={{
+        color: newBest ? color : '#333',
+        fontSize: 8, letterSpacing: 1, fontFamily: FONT,
+        marginTop: 2,
+      }}>
+        {newBest ? '↑ best' : `best ${best}`}
+      </div>
+    </div>
+  );
+}
+
+function newBestLabel(d) {
+  const parts = [];
+  if (d.isNewHigh)    parts.push(' SCORE');
+  if (d.isNewLongest) parts.push(' TIME');
+  if (d.isNewPeak)    parts.push(' PEAK');
+  return parts.join(' +');
+}
+
+function fmt(n) { return typeof n === 'number' ? n.toLocaleString() : n; }
+function secs(s) {
+  if (!s) return '0s';
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const rest = s % 60;
+  return `${m}m ${rest.toString().padStart(2, '0')}s`;
 }
 
 const S = {
@@ -107,8 +123,52 @@ const S = {
     background: '#000', position: 'relative', overflow: 'hidden',
   },
   scanlines: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    position: 'absolute', inset: 0,
     background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, #00000018 2px, #00000018 3px)',
     pointerEvents: 'none', zIndex: 1,
+  },
+  stack: {
+    position: 'relative', zIndex: 2,
+    display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center',
+    height: '100%', gap: 10, padding: 30, textAlign: 'center',
+  },
+  errBanner: {
+    fontSize: 11, color: COLORS.RED, fontFamily: FONT, letterSpacing: 3,
+  },
+  gameOver: {
+    fontSize: 34, fontWeight: 900, color: COLORS.RED, fontFamily: FONT,
+    letterSpacing: -1, lineHeight: 1,
+    textShadow: `0 0 20px ${COLORS.RED}66, 3px 3px 0 ${COLORS.RED}33`,
+  },
+  line: {
+    fontSize: 12, color: COLORS.PINK, fontFamily: FONT,
+    maxWidth: 280, lineHeight: 1.5, marginTop: 2,
+  },
+  stats: {
+    marginTop: 20,
+    display: 'flex', gap: 20, alignItems: 'flex-start',
+  },
+  newBestPulse: {
+    fontSize: 11, color: COLORS.GOLD, fontFamily: FONT,
+    letterSpacing: 2,
+    textShadow: `0 0 12px ${COLORS.GOLD}88`,
+    animation: 'newBestPulse 1.1s ease-in-out infinite',
+  },
+  retryBtn: {
+    marginTop: 20, padding: '13px 40px', fontSize: 17, fontWeight: 900,
+    fontFamily: FONT, background: 'transparent', color: COLORS.GREEN,
+    border: `2px solid ${COLORS.GREEN}`, cursor: 'pointer', letterSpacing: 3,
+    textTransform: 'uppercase',
+    boxShadow: `0 0 12px ${COLORS.GREEN}55, inset 0 0 12px ${COLORS.GREEN}20`,
+    textShadow: `0 0 8px ${COLORS.GREEN}`,
+  },
+  menuBtn: {
+    padding: '8px 20px', fontSize: 10, fontFamily: FONT,
+    background: 'transparent', color: '#666',
+    border: '1px solid #333', cursor: 'pointer', letterSpacing: 2,
+  },
+  footer: {
+    fontSize: 9, color: '#333', fontFamily: FONT, letterSpacing: 1,
   },
 };

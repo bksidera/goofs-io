@@ -1,24 +1,28 @@
-import { useState, useCallback } from 'react';
-import { GAME_WIDTH, GAME_HEIGHT, FONT } from './game/constants.js';
+import { useState, useCallback, useEffect } from 'react';
+import { GAME_WIDTH, GAME_HEIGHT } from './game/constants.js';
 import { LOADING_MSGS } from './copy/banks.js';
-import { useEffect } from 'react';
 
 import LoadingScreen from './screens/LoadingScreen.jsx';
 import TitleScreen   from './screens/TitleScreen.jsx';
 import GameScreen    from './screens/GameScreen.jsx';
 import DeathScreen   from './screens/DeathScreen.jsx';
 
-export default function AdGameExe() {
+/*
+ * AdGame.exe — endless runner. There is no win screen; the game's shape is
+ * survive-until-you-can't. Every run reports back to DeathScreen, which
+ * shows the score, longest / peak / high-score deltas, and hands you back
+ * to Title. No mode picker: endless is the only mode.
+ */
+export default function AdGame() {
   const [screen,      setScreen]      = useState('loading');
   const [loadingStep, setLoadingStep] = useState(0);
-  const [mode,        setMode]        = useState('campaign');
-  const [deathData,   setDeathData]   = useState({ score: 0, level: 1, peak: 100, victory: false, mode: 'campaign' });
+  const [deathData,   setDeathData]   = useState(null);
 
-  // Loading sequence
+  // Boot sequence — a beat of nostalgia, then the game.
   useEffect(() => {
     if (screen !== 'loading') return;
     const t = setInterval(() => {
-      setLoadingStep(s => {
+      setLoadingStep((s) => {
         if (s >= LOADING_MSGS.length - 1) {
           clearInterval(t);
           setTimeout(() => setScreen('title'), 500);
@@ -35,18 +39,12 @@ export default function AdGameExe() {
     setScreen('death');
   }, []);
 
-  const handleStart = useCallback((startMode = 'campaign') => {
-    setMode(startMode);
-    setScreen('game');
-  }, []);
+  const handleStart = useCallback(() => setScreen('game'), []);
+  const handleRetry = useCallback(() => setScreen('game'), []);
+  const handleMenu  = useCallback(() => setScreen('title'), []);
 
-  const handleRetry = useCallback(() => {
-    setScreen('game');
-  }, []);
-
-  // Wrap everything in a full-screen dark shell so the bg is always black
   return (
-    <div style={{ width: '100vw', height: '100svh', background: '#000', overflow: 'hidden' }}>
+    <div style={rootStyle}>
       {screen === 'loading' && (
         <Centered><LoadingScreen step={loadingStep} /></Centered>
       )}
@@ -54,38 +52,63 @@ export default function AdGameExe() {
         <Centered><TitleScreen onStart={handleStart} /></Centered>
       )}
       {screen === 'death' && (
-        <Centered><DeathScreen data={deathData} onRetry={handleRetry} onMenu={() => setScreen('title')} /></Centered>
+        <Centered>
+          <DeathScreen data={deathData} onRetry={handleRetry} onMenu={handleMenu} />
+        </Centered>
       )}
       {screen === 'game' && (
-        <GameScreen onDeath={handleDeath} mode={mode} />
+        <GameScreen onDeath={handleDeath} mode="endless" />
       )}
     </div>
   );
 }
 
-// Centers the 360×640 game box with scaling for non-game screens
+// Center + scale the 360×640 game box for non-game screens.
 function Centered({ children }) {
   const [scale, setScale] = useState(1);
   useEffect(() => {
-    const calc = () => setScale(Math.min(window.innerWidth / GAME_WIDTH, window.innerHeight / GAME_HEIGHT));
+    const calc = () =>
+      setScale(Math.min(window.innerWidth / GAME_WIDTH, window.innerHeight / GAME_HEIGHT));
     calc();
     window.addEventListener('resize', calc);
     return () => window.removeEventListener('resize', calc);
   }, []);
 
   return (
-    <div style={{ width: '100vw', height: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{
-        width: GAME_WIDTH, height: GAME_HEIGHT,
-        transform: `scale(${scale})`,
-        transformOrigin: 'center center',
-        position: 'relative',
-        borderRadius: 4,
-        overflow: 'hidden',
-        boxShadow: '0 0 30px #00FF4130, 0 0 60px #FF2D9510',
-      }}>
+    <div style={centeredWrapStyle}>
+      <div
+        style={{
+          ...centeredBoxStyle,
+          transform: `scale(${scale})`,
+        }}
+      >
         {children}
       </div>
     </div>
   );
 }
+
+const rootStyle = {
+  width: '100vw',
+  height: '100svh',
+  background: '#000',
+  overflow: 'hidden',
+};
+
+const centeredWrapStyle = {
+  width: '100vw',
+  height: '100svh',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const centeredBoxStyle = {
+  width: GAME_WIDTH,
+  height: GAME_HEIGHT,
+  transformOrigin: 'center center',
+  position: 'relative',
+  borderRadius: 4,
+  overflow: 'hidden',
+  boxShadow: '0 0 30px #00FF4130, 0 0 60px #FF2D9510',
+};
