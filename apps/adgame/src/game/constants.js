@@ -117,14 +117,22 @@ export function endlessConfig(elapsedSecs) {
     sponsor: 'Ad · ∞★ · You Cannot Win',
     accent: '#00FF41', accentDim: '#0A4A14',
     goal: Infinity,
-    scrollSpeed: Math.min(6.0, 4.6 + elapsedSecs * 0.01),
-    spawnInterval: Math.max(480, 620 - elapsedSecs * 1.2),
-    decayPct: 2.0 + elapsedSecs * 0.05,      // unbounded — the house always wins
-    decayFloor: 8 + elapsedSecs * 0.12,      // floor also grows: no equilibrium farming
+    // Ease the opening minute so a fresh run has room to breathe; still
+    // accelerates the same on a long run.
+    scrollSpeed: Math.min(6.0, 4.2 + elapsedSecs * 0.012),
+    spawnInterval: Math.max(500, 760 - elapsedSecs * 1.4),
+    decayPct: 1.4 + elapsedSecs * 0.04,      // unbounded — the house still wins
+    decayFloor: 5 + elapsedSecs * 0.10,      // floor grows: no equilibrium farming
+
+    // Halve trap weight (fake ×2 multipliers were the top "wtf" moment) and
+    // trim pctEnemy a touch. Redistribute back into add gates so power still
+    // flows in.
+    gateMix: { ...base.gateMix, trap: 0.06, pctEnemy: 0.06, add: 0.43 },
 
     powerCap: 9999,
     bossSecs: 0,
-    popupChance: 0.8,
+    // Ramps 0.35 → 0.75 across 90s. Was flat 0.8 which felt punishing from t=0.
+    popupChance: Math.min(0.75, 0.35 + elapsedSecs * 0.0044),
   };
 }
 
