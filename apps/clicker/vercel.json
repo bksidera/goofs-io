@@ -6,5 +6,10 @@
   "outputDirectory": "dist",
   "redirects": [
     { "source": "/", "destination": "/clicker/", "permanent": false }
+  ],
+  "rewrites": [
+    { "source": "/clicker", "destination": "/index.html" },
+    { "source": "/clicker/", "destination": "/index.html" },
+    { "source": "/clicker/:path*", "destination": "/:path*" }
   ]
 }
