@@ -117,22 +117,23 @@ export function endlessConfig(elapsedSecs) {
     sponsor: 'Ad · ∞★ · You Cannot Win',
     accent: '#00FF41', accentDim: '#0A4A14',
     goal: Infinity,
-    // Ease the opening minute so a fresh run has room to breathe; still
-    // accelerates the same on a long run.
-    scrollSpeed: Math.min(6.0, 4.2 + elapsedSecs * 0.012),
-    spawnInterval: Math.max(500, 760 - elapsedSecs * 1.4),
-    decayPct: 1.4 + elapsedSecs * 0.04,      // unbounded — the house still wins
-    decayFloor: 5 + elapsedSecs * 0.10,      // floor grows: no equilibrium farming
+    // Slower baseline; scales up more gradually. Cap eased 6.0 → 5.4.
+    scrollSpeed: Math.min(5.4, 3.6 + elapsedSecs * 0.010),
+    spawnInterval: Math.max(560, 880 - elapsedSecs * 1.4),
+    // Milder decay — the game still ends, just not immediately.
+    decayPct: 0.8 + elapsedSecs * 0.03,
+    decayFloor: 3 + elapsedSecs * 0.08,
 
-    // Halve trap weight (fake ×2 multipliers were the top "wtf" moment) and
-    // trim pctEnemy a touch. Redistribute back into add gates so power still
-    // flows in.
-    gateMix: { ...base.gateMix, trap: 0.06, pctEnemy: 0.06, add: 0.43 },
+    // Heavier lean toward "good" gates so the click cycle rewards you more
+    // than it punishes. add: 34→50, enemy: 28→22, trap: 12→5, pctEnemy: 9→4,
+    // mystery: 7→5. Multiply stays at 10 to preserve big moments.
+    gateMix: { add: 0.50, enemy: 0.22, multiply: 0.10, trap: 0.05, mystery: 0.05, pctEnemy: 0.04 },
 
     powerCap: 9999,
     bossSecs: 0,
-    // Ramps 0.35 → 0.75 across 90s. Was flat 0.8 which felt punishing from t=0.
-    popupChance: Math.min(0.75, 0.35 + elapsedSecs * 0.0044),
+    // Ramps 0.20 → 0.60 across 90s. Popups are the primary difficulty driver;
+    // gentler ramp gives the first minute real breathing room.
+    popupChance: Math.min(0.60, 0.20 + elapsedSecs * 0.0044),
   };
 }
 

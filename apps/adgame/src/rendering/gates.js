@@ -295,7 +295,11 @@ export function drawGate(ctx, cx, yTop, text, type, revealed, frame, infected, s
 
   // Render sprite per type
   if (type === 'enemy' || type === 'pctEnemy') {
-    drawEnemy(ctx, cx, cy, type === 'pctEnemy' ? 2 : variant, frame);
+    // Regular enemies now use variants 0-1 ONLY (blue/red palettes).
+    // pctEnemy keeps its distinctive magenta-purple palette (variant 2)
+    // as an unambiguous "this one hurts more when you're winning" tell.
+    const p = type === 'pctEnemy' ? 2 : (variant % 2);
+    drawEnemy(ctx, cx, cy, p, frame);
   } else if (type === 'add') {
     drawGun(ctx, cx, cy, frame, variant);
   } else if (type === 'multiply') {
