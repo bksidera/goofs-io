@@ -20,15 +20,20 @@ export function rollGateType(gateMix, rng = Math.random) {
 export function rollGateValue(type, levelN, rng = Math.random) {
   switch (type) {
     case 'add': {
-      const b = 14 + levelN * 9;
+      // Bigger add gates so the risk/reward ledger tilts toward the player
+      // in the early game.
+      const b = 18 + levelN * 10;
       return Math.floor(b + rng() * b * 0.5);
     }
     case 'enemy': {
-      const b = 10 + levelN * 6;
+      // Softer enemy hits so the first few unavoidable misses aren't fatal.
+      const b = 8 + levelN * 4;
       return Math.floor(b + rng() * b * 0.4);
     }
     case 'pctEnemy':
-      return Math.max(6, Math.min(25, Math.floor(8 + levelN * 1.6 + (rng() - 0.5) * 6)));
+      // Capped at 15% (was 25%). At high power a single hit was cratering
+      // runs — that's cool once as a peak-of-the-arc moment, not every 30s.
+      return Math.max(4, Math.min(15, Math.floor(5 + levelN * 1.0 + (rng() - 0.5) * 4)));
     case 'multiply':
       return 2; // ×2 only — the ×3/×5 era is what made v1 unloseable
     case 'trap':
