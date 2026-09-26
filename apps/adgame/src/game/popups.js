@@ -5,10 +5,13 @@ import { POPUP_MESSAGES } from '../copy/banks.js';
 // ── Tier selection (by level number, 1-10) ───────────────────────────────────
 
 function pickTier(levelN) {
-  if (levelN >= 9) return Math.random() < 0.15 ? 'boss'     : pickTier(levelN - 3);
-  if (levelN >= 7) return Math.random() < 0.28 ? 'splitter' : pickTier(levelN - 2);
-  if (levelN >= 5) return Math.random() < 0.32 ? 'decoy'    : 'dodger';
-  if (levelN >= 3) return Math.random() < 0.45 ? 'dodger'   : 'basic';
+  // Splitter was too punishing — closing one popup would spawn two new ones,
+  // which cascaded into unwinnable clutter. Cut the appearance rate roughly
+  // by half and downgraded to a single-child split (see closePopup below).
+  if (levelN >= 9) return Math.random() < 0.10 ? 'boss'     : pickTier(levelN - 3);
+  if (levelN >= 7) return Math.random() < 0.14 ? 'splitter' : pickTier(levelN - 2);
+  if (levelN >= 5) return Math.random() < 0.28 ? 'decoy'    : 'dodger';
+  if (levelN >= 3) return Math.random() < 0.42 ? 'dodger'   : 'basic';
   return 'basic';
 }
 
@@ -63,9 +66,10 @@ export function closePopup(st, id, setPopups) {
   }
 
   if (p.tier === 'splitter') {
+    // v1 spawned TWO children — one closure could snowball the whole screen.
+    // Now it's a single child: still annoying, no longer death-spiral.
     p.alive = false;
     st.pops = st.pops.filter(p2 => p2.alive);
-    spawnBasicPopup(st, setPopups);
     spawnBasicPopup(st, setPopups);
     return;
   }
